@@ -222,7 +222,8 @@
 		} else if (mCustomization.includes(uid)) {
 			$("#customization").addClass("show");			
 		}
-		
+
+		// 기본설정
 		$("a[href='/"+uid+"']").addClass("active");		
     });
 </script>
