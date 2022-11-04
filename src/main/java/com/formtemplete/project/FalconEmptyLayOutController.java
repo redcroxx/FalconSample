@@ -44,7 +44,7 @@ public class FalconEmptyLayOutController {
 	public ModelAndView AuthLogin(HttpServletRequest request, HttpServletResponse response, HttpSession session) throws Exception  {
 		ModelAndView mv = new ModelAndView();
 		fCommon.setSessionUrl(request, response, session);
-		mv.setViewName("AuthLogin/login.FalconEmptyLayout");
+		mv.setViewName("/pages/authentication/split/login.FalconEmptyLayout");
 		return mv;	
 	}	
 	

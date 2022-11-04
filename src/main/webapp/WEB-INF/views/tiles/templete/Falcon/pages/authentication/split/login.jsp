@@ -1,3 +1,9 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="tiles" uri="http://tiles.apache.org/tags-tiles" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+
     <!-- ===============================================-->
     <!--    Main Content-->
     <!-- ===============================================-->
@@ -37,7 +43,7 @@
                       </div>
                       <div class="mb-3">
                         <div class="d-flex justify-content-between">
-                          <label class="form-label" for="split-login-password">Password</label>
+                          <label class="form-label" for="split-login-password">비밀번호</label>
                         </div>
                         <input class="form-control" id="split-login-password" type="password" />
                       </div>

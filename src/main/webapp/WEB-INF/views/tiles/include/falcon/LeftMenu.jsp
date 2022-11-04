@@ -1,3 +1,9 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="tiles" uri="http://tiles.apache.org/tags-tiles" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+
 
 <!-- Left Menu -->
 <div class="d-flex align-items-center">
@@ -20,7 +26,7 @@
         </a>
         <ul class="nav collapse show" id="dashboard">
           <li class="nav-item"><a id="mDefault" class="nav-link" href="/MainView.do" data-bs-toggle="" aria-expanded="false">
-              <div class="d-flex align-items-center"><span class="nav-link-text ps-1">기본</span>
+              <div class="d-flex align-items-center"><span class="nav-link-text ps-1">DashBoard</span>
               </div>
             </a>
             <!-- more inner pages-->
