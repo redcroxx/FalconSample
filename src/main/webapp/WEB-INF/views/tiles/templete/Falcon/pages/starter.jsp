@@ -1,3 +1,9 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="tiles" uri="http://tiles.apache.org/tags-tiles" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+
           <div class="card">
             <div class="card-body overflow-hidden p-lg-6">
               <div class="row align-items-center">
