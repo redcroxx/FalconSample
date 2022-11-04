@@ -1,0 +1,38 @@
+@CHARSET "UTF-8";
+
+/**
+ * 공통 CSS
+ */
+ 
+html{
+    overflow-y: scroll;
+    background: #fff;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+	width: 99%;
+    height: 99%;	
+}
+
+body, h1, h2, h3, h4, th, td, input, select, textarea, button {
+    font-size: 14px;
+    line-height: 1.5;
+    font-family: "Noto Sans KR", "Helvetica Neue", "Apple SD Gothic Neo", "맑은 고딕", "Malgun Gothic", "돋움", dotum, sans-serif;
+    color: #666;
+}
+
+ul li {
+	list-style:none;  
+	float : left;
+	margin-top : 0;
+	margin-bottom : 0;
+	padding-top : 0;
+	padding-bottom : 0;
+}
+
+li {
+	padding-left : 10px;
+	padding-right : 10px;
+}

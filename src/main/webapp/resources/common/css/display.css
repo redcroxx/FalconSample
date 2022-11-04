@@ -1,0 +1,54 @@
+@CHARSET "UTF-8";
+
+/**
+ * 공통 CSS
+ */
+ 
+.flexRow{
+	display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    width : 100%;
+}
+
+.flexCol{
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    width: 100%;
+    align-content: flex-start;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.AlignEnd{
+	align-content: center;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.spread-underline {
+  color: #333;
+  text-decoration: none;
+  display: inline-block;
+  padding: 3px 0;
+  position: relative;
+}
+
+.spread-underline:after {    
+  background: none repeat scroll 0 0 transparent;
+  bottom: 0;
+  content: "";
+  display: block;
+  height: 2px;
+  left: 50%;
+  position: absolute;
+  background: #ffb000;
+  transition: width 0.3s ease 0s, left 0.3s ease 0s;
+  width: 0;
+}
+
+.spread-underline:hover:after { 
+  width: 100%; 
+  left: 0; 
+}

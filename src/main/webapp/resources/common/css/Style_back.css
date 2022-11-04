@@ -1,0 +1,65 @@
+@CHARSET "UTF-8";
+/**
+ * 공통 CSS
+ */
+html,body,form {width:100%;height:100%}
+
+.flexRow{
+	display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+.flexCol{
+	display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+}
+
+.boxSize100per{
+	width:100%;
+    height:100%;
+}
+
+.boxSizeHalf{
+	width:50%;
+    height:50%;
+}
+
+.boxShadow1{
+	box-shadow: 5px 5px 5px 5px gray;
+}
+
+.ContentCenter{
+    align-content: center;
+    justify-content: center;
+    align-items: center;	
+}
+
+.divInput{
+	padding-left : 40px;
+	width:100%;
+	height : 40px;
+}
+
+.divInput{
+	padding-left : 40px;
+	width:100%;
+	height : 40px;
+}
+
+
+.divInput .divInputSet{
+    padding-top: 10px;
+    padding-bottom: 10px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+}
+
+

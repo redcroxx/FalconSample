@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+
+    <!-- tiles 적용 -->
+    <definition name="tilesLayout" template="/WEB-INF/views/tiles/tileLayout.jsp">
+        <put-attribute name="IncludeJs" value="/WEB-INF/views/tiles/include/IncludeJs.jsp" />
+        <put-attribute name="topMenu" value="/WEB-INF/views/tiles/layout/TopMenu.jsp" />    
+    </definition>
+ 
+    <definition name="*.tiles" extends="tilesLayout">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/Page/{1}.jsp" />
+    </definition>
+    
+    <definition name="*/*.tiles" extends="tilesLayout">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/Page/{1}/{2}.jsp" />
+    </definition>
+    
+    <!-- 타일즈 미 적용 -->
+    <definition name="EmptyLayout" template="/WEB-INF/views/tiles/tileEmpty.jsp">
+        <put-attribute name="IncludeJs" value="/WEB-INF/views/tiles/include/IncludeJs.jsp" />            
+    </definition >
+    
+    <definition name="*.Empty" extends="EmptyLayout">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/empty/{1}.jsp" />
+    </definition>
+        
+    <definition name="*/*.Empty" extends="EmptyLayout">
+        <put-attribute name="NormalLayout" value="/WEB-INF/views/tiles/empty/{1}/{2}.jsp" />
+    </definition>   
+    
+    <!-- tiles 적용 -->
+    <definition name="FalconTemplete" template="/WEB-INF/views/tiles/FalconLayout.jsp">
+        <put-attribute name="IncludeJs" value="/WEB-INF/views/tiles/include/falcon/falconIncludeJs.jsp" />
+        <put-attribute name="TopMenu"  value="/WEB-INF/views/tiles/include/falcon/TopMenu.jsp" />
+        <put-attribute name="LeftMenu"  value="/WEB-INF/views/tiles/include/falcon/LeftMenu.jsp" />
+        <put-attribute name="Modal"  value="/WEB-INF/views/tiles/include/falcon/Modal.jsp" />                            
+        <put-attribute name="Footer"  value="/WEB-INF/views/tiles/include/falcon/Footer.jsp" />
+        <put-attribute name="Setting"  value="/WEB-INF/views/tiles/include/falcon/Setting.jsp" />        
+    </definition>                               
+    
+    <definition name="*.FalconLayout" extends="FalconTemplete">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}.jsp" />
+    </definition>
+        
+    <definition name="*/*.FalconLayout" extends="FalconTemplete">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}.jsp" />
+    </definition>  
+    
+    <definition name="*/*/*.FalconLayout" extends="FalconTemplete">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}/{3}.jsp" />
+    </definition>       
+    
+    <definition name="*/*/*/*.FalconLayout" extends="FalconTemplete">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}/{3}/{4}.jsp" />
+    </definition>              
+    
+    <definition name="*/*/*/*/*.FalconLayout" extends="FalconTemplete">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}/{3}/{4}/{5}.jsp" />
+    </definition>      
+    
+    <!-- tiles 미적용 -->
+    <definition name="FalconTempleteEmpty" template="/WEB-INF/views/tiles/FalconEmptyLayout.jsp">
+        <put-attribute name="IncludeJs" value="/WEB-INF/views/tiles/include/falcon/falconIncludeJs.jsp" />
+        <put-attribute name="TopMenu"  value="/WEB-INF/views/tiles/include/falcon/TopMenu.jsp" />
+        <put-attribute name="LeftMenu"  value="/WEB-INF/views/tiles/include/falcon/LeftMenu.jsp" /> 
+        <put-attribute name="Modal"  value="/WEB-INF/views/tiles/include/falcon/Modal.jsp" />                           
+        <put-attribute name="Footer"  value="/WEB-INF/views/tiles/include/falcon/Footer.jsp" />
+        <put-attribute name="Setting"  value="/WEB-INF/views/tiles/include/falcon/Setting.jsp" />        
+    </definition>                               
+    
+    <definition name="*.FalconEmptyLayout" extends="FalconTempleteEmpty">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}.jsp" />
+    </definition>
+        
+    <definition name="*/*.FalconEmptyLayout" extends="FalconTempleteEmpty">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}.jsp" />
+    </definition>  
+    
+    <definition name="*/*/*.FalconEmptyLayout" extends="FalconTempleteEmpty">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}/{3}.jsp" />
+    </definition>       
+    
+    <definition name="*/*/*/*.FalconEmptyLayout" extends="FalconTempleteEmpty">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}/{3}/{4}.jsp" />
+    </definition>      
+    
+    
+    <definition name="*/*/*/*/*.FalconEmptyLayout" extends="FalconTempleteEmpty">
+        <put-attribute name="content" value="/WEB-INF/views/tiles/templete/Falcon/{1}/{2}/{3}/{4}/{5}.jsp" />
+    </definition>      
+
+</tiles-definitions>
