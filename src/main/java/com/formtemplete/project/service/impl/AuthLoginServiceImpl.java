@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-//import com.formtemplete.project.VO.UserVO;
+import com.formtemplete.project.VO.UserVO;
 import com.formtemplete.project.service.AuthLoginService;
 
 @Service("AuthLoginService")
@@ -20,14 +20,13 @@ public class AuthLoginServiceImpl implements AuthLoginService{
 	@Inject 
 	private SqlSession sqlSession;
 	
-	/*
 	@Override
 	public UserVO CheckUser(Map<String, String> sMap) throws Exception{
 
 		try {
 			logger.debug("===============CheckUser Impl param==============");		
-			logger.debug("params user_ID = " + sMap.get("userId").toString());
-			logger.debug("params user_PW = " + sMap.get("userPW").toString());
+			logger.debug("params Email = " + sMap.get("Email").toString());
+			logger.debug("params password = " + sMap.get("password").toString());
 			
 		} catch (Exception Ex) {
 			if (logger.isDebugEnabled()) {
@@ -35,7 +34,6 @@ public class AuthLoginServiceImpl implements AuthLoginService{
 			}
 		}
 		
-		return (UserVO)sqlSession.selectOne("LoginMapper.getLogin", sMap);				
+		return (UserVO)sqlSession.selectOne("UserCheckMapper.UserInfoCheck", sMap);				
 	}
-	*/
 }

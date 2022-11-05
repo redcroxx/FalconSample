@@ -44,7 +44,8 @@
                     <div class="col-auto"><a class="fs--1" href="../../../pages/authentication/simple/forgot-password.html">Forgot Password?</a></div>
                   </div>
                   <div class="mb-3">
-                    <button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">Log in</button>
+                    <!-- button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">Log in</button-->
+					<button class="btn btn-primary d-block w-100 mt-3" type="button" id="btnLogin">Log in</button>                                        
                   </div>
                 </form>
                 <div class="position-relative mt-4">
@@ -176,3 +177,72 @@
         </div><small class="text-uppercase text-primary fw-bold bg-soft-primary py-2 pe-2 ps-1 rounded-end">customize</small>
       </div>
     </a>
+    
+    
+<script type="text/javascript">
+
+	$(document).ready(function() {
+	
+        // 회원가입 폼
+        $('#btnLogin').click(function(){
+        	ValidCheck();  
+        })     
+        
+        $('#btnFindID').click(function(){
+        	ValidCheck();  
+        })  
+	        
+    });
+	
+	// Valid체크
+	function ValidCheck(){
+		
+		if($('#email').val() == "") {
+			alert("이메일이 입력되지 않았습니다.!");
+			return;
+		}
+		
+		if($('#password').val() == "") {
+			alert("비밀번호가 입력되지 않았습니다");
+			return;
+		}		
+		
+		if(fn_idCheck()){
+        	location.href = "/MainView.do";
+		} 
+	}
+		
+    // 아이디 중복 체크
+    function fn_idCheck() {
+        var sUserID = $('#email').val();    	
+        var sUserPW = $('#password').val();        
+        var param = { "Email" : sUserID , "password" : sUserPW };
+        var sBool = false;
+        
+        $.ajax({
+            url : "/LoginCheck.do",
+            contentType : "application/json; charset=utf-8",
+            method : "POST",
+            dataType : "json",
+            async : false,   //  async : false를 해야 ajax 결과값 받아온후 후단의 함수를 호출할수 있다
+            data : JSON.stringify(param),
+            success : function(data) {
+                if( data.result !== null || data.result !== "" ) {
+                	alert("data.resultMsg : " + data.resultMsg);
+                	if(data.resultMsg === "Success"){
+                		sBool = true;
+                	} else {
+                		sBool = false;
+                	}
+                }
+            },
+            error : function(data) {
+                console.log("error result  : ", result);
+            	sBool = false;                
+            }
+        });
+        
+        return sBool;
+    }	
+	
+</script>	    

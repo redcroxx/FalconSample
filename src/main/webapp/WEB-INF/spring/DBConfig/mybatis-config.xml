@@ -10,8 +10,8 @@
         <setting name="mapUnderscoreToCamelCase" value="false" />         
     </settings>         
     <typeAliases> 
-    
-        <typeAlias type="java.util.Map" alias="map" />
+        <typeAlias type="java.util.Map" alias="map" />        
+        <typeAlias alias="UserVO" type="com.formtemplete.project.VO.UserVO"/>        
         <!-- typeAlias alias="UserVO" type="com.formtemplete.project.VO.UserVO"/-->            
         
         <!-- typeAlias alias="LDataMap" type="com.project.Xroute2.common.LDataMap" /-->
