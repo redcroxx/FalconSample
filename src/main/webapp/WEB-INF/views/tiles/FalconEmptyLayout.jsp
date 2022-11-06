@@ -86,6 +86,7 @@
   </head>
   <body>
     <tiles:insertAttribute name="content" />
+    <tiles:insertAttribute name="Modal" />       
     <tiles:insertAttribute name="Setting" />	
 	<tiles:insertAttribute name="IncludeJs" />
   </body>
