@@ -32,17 +32,6 @@
     <script src="./resources/Falcon/js/assets/config.js"></script>
     <script src="./resources/Falcon/js/vendors/simplebar/simplebar.min.js"></script>
 
-
-
-    <!-- ===============================================-->
-    <!--    Stylesheets-->
-    <!-- ===============================================-->
-    
-    <!-- ===============================================-->
-    <!--    project-manager -->
-    <!-- ===============================================-->
-    
-
     <link href="./resources/Falcon/js/vendors/leaflet/leaflet.css" rel="stylesheet">
     <link href="./resources/Falcon/js/vendors/leaflet.markercluster/MarkerCluster.css" rel="stylesheet">
     <link href="./resources/Falcon/js/vendors/leaflet.markercluster/MarkerCluster.Default.css" rel="stylesheet">
@@ -227,5 +216,9 @@
 		// 기본설정
 		$("a[href='/"+uid+"']").addClass("active");		
     });
+	
+	function ShowModal(sVal){
+		console.log("ShowModal111 : " + sVal);
+	}	
 </script>
 

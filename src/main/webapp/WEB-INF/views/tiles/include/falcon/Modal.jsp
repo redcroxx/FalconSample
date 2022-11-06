@@ -78,14 +78,14 @@
                 <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body py-4 px-5">
-                <form>
+                <form id="registerUser">
                   <div class="mb-3">
                     <label class="form-label" for="modal-auth-name">Name</label>
-                    <input class="form-control" type="text" autocomplete="on" id="modal-auth-name" />
+                    <input class="form-control" type="text" autocomplete="on" id="modal-auth-name" name="modal-auth-name"/>
                   </div>
                   <div class="mb-3">
                     <label class="form-label" for="modal-auth-email">Email address</label>
-                    <input class="form-control" type="email" autocomplete="on" id="modal-auth-email" />
+                    <input class="form-control" type="email" autocomplete="on" id="modal-auth-email" name="modal-auth-email"/>
                   </div>
                   <div class="row gx-2">
                     <div class="mb-3 col-sm-6">
@@ -166,25 +166,25 @@
                       <form class="needs-validation" novalidate="novalidate">
                         <div class="mb-3">
                           <label class="form-label" for="bootstrap-wizard-validation-wizard-name">Name</label>
-                          <input class="form-control" type="text" name="name" placeholder="John Smith" id="bootstrap-wizard-validation-wizard-name" />
+                          <input class="form-control" type="text" id="wizardName" name="wizardName" placeholder="John Smith" id="bootstrap-wizard-validation-wizard-name" />
                         </div>
                         <div class="mb-3">
                           <label class="form-label" for="bootstrap-wizard-validation-wizard-email">Email*</label>
-                          <input class="form-control" type="email" name="email" placeholder="Email address" pattern="^([a-zA-Z0-9_.-])+@(([a-zA-Z0-9-])+.)+([a-zA-Z0-9]{2,4})+$" required="required" id="bootstrap-wizard-validation-wizard-email" data-wizard-validate-email="true" />
+                          <input class="form-control" type="email" id="wizardEmail" name="wizardEmail" placeholder="Email address" pattern="^([a-zA-Z0-9_.-])+@(([a-zA-Z0-9-])+.)+([a-zA-Z0-9]{2,4})+$" required="required" id="bootstrap-wizard-validation-wizard-email" data-wizard-validate-email="true" />
                           <div class="invalid-feedback">You must add email</div>
                         </div>
                         <div class="row g-2">
                           <div class="col-6">
                             <div class="mb-3">
                               <label class="form-label" for="bootstrap-wizard-validation-wizard-password">Password*</label>
-                              <input class="form-control" type="password" name="password" placeholder="Password" required="required" id="bootstrap-wizard-validation-wizard-password" data-wizard-validate-password="true" />
+                              <input class="form-control" type="password" name="wizardpassword" id="wizardpassword" placeholder="Password" required="required" id="bootstrap-wizard-validation-wizard-password" data-wizard-validate-password="true" />
                               <div class="invalid-feedback">Please enter password</div>
                             </div>
                           </div>
                           <div class="col-6">
                             <div class="mb-3">
                               <label class="form-label" for="bootstrap-wizard-validation-wizard-confirm-password">Confirm Password*</label>
-                              <input class="form-control" type="password" name="confirmPassword" placeholder="Confirm Password" required="required" id="bootstrap-wizard-validation-wizard-confirm-password" data-wizard-validate-confirm-password="true" />
+                              <input class="form-control" type="password" name="wizardconfirmPassword" id="wizardconfirmPassword" placeholder="Confirm Password" required="required" id="bootstrap-wizard-validation-wizard-confirm-password" data-wizard-validate-confirm-password="true" />
                               <div class="invalid-feedback">Passwords need to match</div>
                             </div>
                           </div>
@@ -543,7 +543,7 @@
                         <button class="btn btn-link ps-0" type="button"><span class="fas fa-chevron-left me-2" data-fa-transform="shrink-3"></span>Prev</button>
                       </li>
                       <li class="next">
-                        <button class="btn btn-primary px-5 px-sm-6" type="submit">Next<span class="fas fa-chevron-right ms-2" data-fa-transform="shrink-3"> </span></button>
+                      	<button class="btn btn-primary px-5 px-sm-6" type="button" id="btnWizardRegister" name="btnWizardRegister">Next<span class="fas fa-chevron-right ms-2" data-fa-transform="shrink-3"> </span></button>
                       </li>
                     </ul>
                   </div>
@@ -553,3 +553,31 @@
             </div>
           </div>
         </div>                      
+               
+		<script type="text/javascript"> 
+		$(document).ready(function() {
+	        // 회원가입 폼
+	        $('#btnWizardRegister').click(function(){
+	        	console.log("btnWizardRegister");
+	        	if($('#wizardName').val() == "") {
+	        		alert("이름을 입력해주세요.!");
+	        		return;
+	        	}
+	        	
+	        	if($('#wizardEmail').val() == "") {
+	        		alert("이메일을 입력해주세요.!");
+	        		return;
+	        	}	        	
+	        	
+	        	if($('#wizardpassword').val() != $('#wizardconfirmPassword').val()) {
+	        		alert("비밀번호가 틀립니다.");
+	        		return;	        		
+	        	}
+	        	
+	        })  	
+	    });
+		
+		</script>
+        
+        
+        
