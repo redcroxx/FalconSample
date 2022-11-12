@@ -246,12 +246,6 @@
             <version>${org.apache.tiles-version}</version>
         </dependency>
         		
-		<dependency>
-		    <groupId>org.lazyluke</groupId>
-		    <artifactId>log4jdbc-remix</artifactId>
-		    <version>0.2.7</version>
-		</dependency>               		
-        		
         <!-- JSON View -->
         <dependency>
             <groupId>net.sf.json-lib</groupId>

@@ -10,7 +10,24 @@
     <util:properties id="db" location="/resources/config/db.properties"></util:properties>
     <util:properties id="COMMONSTYLE" location="/resources/config/CommonStyle.properties"></util:properties>
     
-    <bean class="org.apache.commons.dbcp.BasicDataSource" id="dataSource" destroy-method="close">
+    <bean id="dataSourceSpied" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="#{db['db.driver']}"/>
+        <property name="url" value="#{db['db.url']}"/>
+        <property name="username" value="#{db['db.username']}"/>
+        <property name="password" value="#{db['db.password']}"/>
+    </bean>
+     
+    <bean id="dataSource" class="net.sf.log4jdbc.Log4jdbcProxyDataSource">
+        <constructor-arg ref="dataSourceSpied" />
+        <property name="logFormatter">
+            <bean class="net.sf.log4jdbc.tools.Log4JdbcCustomFormatter">
+                <property name="loggingType" value="MULTI_LINE" />
+                <property name="sqlPrefix" value="SQL         :  "/>
+            </bean>
+        </property>
+    </bean>    
+    
+    <!-- bean class="org.apache.commons.dbcp.BasicDataSource" id="dataSource" destroy-method="close">
         <property value="#{db['db.driver']}" name="driverClassName" />
         <property value="#{db['db.url']}" name="url" />
         <property value="#{db['db.username']}" name="username" />     
@@ -25,7 +42,7 @@
                 <property name="sqlPrefix" value="SQL         :  "/>
             </bean>
         </property>
-    </bean>   
+    </bean-->   
     
     <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"> 
         <property name="dataSource" ref="dataSource" /> 
