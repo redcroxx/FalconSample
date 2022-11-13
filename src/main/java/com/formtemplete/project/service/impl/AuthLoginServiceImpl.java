@@ -36,4 +36,16 @@ public class AuthLoginServiceImpl implements AuthLoginService{
 		
 		return (UserVO)sqlSession.selectOne("UserCheckMapper.UserInfoCheck", sMap);				
 	}
+	
+	@Override
+	public UserVO CheckEmail(Map<String, String> sMap) throws Exception{
+		try {
+			logger.debug("params Email = " + sMap.get("Email").toString());
+		} catch (Exception Ex) {
+			if (logger.isDebugEnabled()) {
+				Ex.printStackTrace();
+			}
+		}
+		return (UserVO)sqlSession.selectOne("UserCheckMapper.UserCheckEmail", sMap);				
+	}	
 }

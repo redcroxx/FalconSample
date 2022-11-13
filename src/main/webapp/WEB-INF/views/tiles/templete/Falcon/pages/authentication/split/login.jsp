@@ -33,7 +33,7 @@
                       <div class="col-auto">
                         <h3>Login</h3>
                       </div>
-                      <div class="col-auto fs--1 text-600"><span><a href="#register-custommer-modal" data-bs-toggle="modal" aria-expanded="false" id="ModalWizard" onClick="ShowModal(this.id);">계정생성</a></span></div>
+                      <div class="col-auto fs--1 text-600"><span><a href="#register-custommer-modal" data-bs-toggle="modal" aria-expanded="false" id="ModalWizard">계정생성</a></span></div>
                     </div>
                     <form>
                       <div class="mb-3">
@@ -54,7 +54,7 @@
                             <label class="form-check-label mb-0" for="split-checkbox">E-Mail 기억하기</label>
                           </div>
                         </div>
-                        <div class="col-auto"><a class="fs--1" href="#fotgotpassword-modal"  data-bs-toggle="modal" aria-expanded="false" id="ModalFindId" onClick="ShowModal(this.id);">비밀번호 찾기</a></div>
+                        <div class="col-auto"><a class="fs--1" href="#fotgotpassword-modal"  data-bs-toggle="modal" aria-expanded="false" id="ModalFindId">비밀번호 찾기</a></div>
                       </div>
                       <div class="mb-3">
                         <!-- button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">Log in</button-->

@@ -163,34 +163,42 @@
                 <div class="card-body py-4" id="wizard-controller">
                   <div class="tab-content">
                     <div class="tab-pane active px-sm-3 px-md-5" role="tabpanel" aria-labelledby="bootstrap-wizard-validation-tab1" id="bootstrap-wizard-validation-tab1">
-                      <form class="needs-validation" novalidate="novalidate">
+                      <form class="needs-validation">                    
+                      <!-- form class="needs-validation" novalidate="novalidate"-->
+                      
+                        <div class="mb-3">
+                          <label class="form-label" for="bootstrap-wizard-validation-wizard-email">Email*</label>
+                          <div style="width: 100%; display: flex; flex-direction: row; flex-wrap: nowrap;align-content: center; justify-content: flex-start; align-items: center;">
+                          	  <input class="form-control" type="email" id="wizardEmail" name="wizardEmail" placeholder="Email address" pattern="^([a-zA-Z0-9_.-])+@(([a-zA-Z0-9-])+.)+([a-zA-Z0-9]{2,4})+$" id="bootstrap-wizard-validation-wizard-email"/>
+                			  <button class="btn btn-primary d-block" style="margin-left:5px;" type="button" id="btnFindEmail">Find</button>                                    
+                          	  <div class="invalid-feedback">You must add email</div>
+                          </div>
+                        </div>                      
+                      
                         <div class="mb-3">
                           <label class="form-label" for="bootstrap-wizard-validation-wizard-name">Name</label>
                           <input class="form-control" type="text" id="wizardName" name="wizardName" placeholder="John Smith" id="bootstrap-wizard-validation-wizard-name" />
                         </div>
-                        <div class="mb-3">
-                          <label class="form-label" for="bootstrap-wizard-validation-wizard-email">Email*</label>
-                          <input class="form-control" type="email" id="wizardEmail" name="wizardEmail" placeholder="Email address" pattern="^([a-zA-Z0-9_.-])+@(([a-zA-Z0-9-])+.)+([a-zA-Z0-9]{2,4})+$" required="required" id="bootstrap-wizard-validation-wizard-email" data-wizard-validate-email="true" />
-                          <div class="invalid-feedback">You must add email</div>
-                        </div>
+
                         <div class="row g-2">
                           <div class="col-6">
                             <div class="mb-3">
                               <label class="form-label" for="bootstrap-wizard-validation-wizard-password">Password*</label>
-                              <input class="form-control" type="password" name="wizardpassword" id="wizardpassword" placeholder="Password" required="required" id="bootstrap-wizard-validation-wizard-password" data-wizard-validate-password="true" />
+                              <input class="form-control" type="password" name="wizardpassword" id="wizardpassword" placeholder="Password" id="bootstrap-wizard-validation-wizard-password" />
+                    
                               <div class="invalid-feedback">Please enter password</div>
                             </div>
                           </div>
                           <div class="col-6">
                             <div class="mb-3">
                               <label class="form-label" for="bootstrap-wizard-validation-wizard-confirm-password">Confirm Password*</label>
-                              <input class="form-control" type="password" name="wizardconfirmPassword" id="wizardconfirmPassword" placeholder="Confirm Password" required="required" id="bootstrap-wizard-validation-wizard-confirm-password" data-wizard-validate-confirm-password="true" />
+                              <input class="form-control" type="password" name="wizardconfirmPassword" id="wizardconfirmPassword" placeholder="Confirm Password"  id="bootstrap-wizard-validation-wizard-confirm-password"/>
                               <div class="invalid-feedback">Passwords need to match</div>
                             </div>
                           </div>
                         </div>
                         <div class="form-check">
-                          <input class="form-check-input" type="checkbox" name="terms" required="required" checked="checked" id="bootstrap-wizard-validation-wizard-checkbox" />
+                          <input class="form-check-input" type="checkbox" name="terms" checked="checked" id="bootstrap-wizard-validation-wizard-checkbox" />
                           <label class="form-check-label" for="bootstrap-wizard-validation-wizard-checkbox">I accept the <a href="#!">terms </a>and <a href="#!">privacy policy</a></label>
                         </div>
                       </form>
@@ -540,10 +548,10 @@
                   <div class="px-sm-3 px-md-5">
                     <ul class="pager wizard list-inline mb-0">
                       <li class="previous">
-                        <button class="btn btn-link ps-0" type="button"><span class="fas fa-chevron-left me-2" data-fa-transform="shrink-3"></span>Prev</button>
+                        <button class="btn btn-link ps-0" type="button" id="btnWizardPrev" name="btnWizardPrev"><span class="fas fa-chevron-left me-2" data-fa-transform="shrink-3"  ></span>Prev</button>
                       </li>
                       <li class="next">
-                      	<button class="btn btn-primary px-5 px-sm-6" type="button" id="btnWizardRegister" name="btnWizardRegister">Next<span class="fas fa-chevron-right ms-2" data-fa-transform="shrink-3"> </span></button>
+                      	<button class="btn btn-primary px-5 px-sm-6" type="button" id="btnWizardNext" name="btnWizardNext">Next<span class="fas fa-chevron-right ms-2" data-fa-transform="shrink-3"> </span></button>
                       </li>
                     </ul>
                   </div>
@@ -554,30 +562,148 @@
           </div>
         </div>                      
                
-		<script type="text/javascript"> 
+		<script type="text/javascript">
+		
+		var VisibleTabActiveID = "";
+		var TabTitleName = "bootstrap-wizard-validation-tab";
+		var TabIndex = "";
+		
 		$(document).ready(function() {
 	        // 회원가입 폼
-	        $('#btnWizardRegister').click(function(){
-	        	console.log("btnWizardRegister");
-	        	if($('#wizardName').val() == "") {
-	        		alert("이름을 입력해주세요.!");
-	        		return;
-	        	}
-	        	
-	        	if($('#wizardEmail').val() == "") {
-	        		alert("이메일을 입력해주세요.!");
-	        		return;
-	        	}	        	
-	        	
-	        	if($('#wizardpassword').val() != $('#wizardconfirmPassword').val()) {
-	        		alert("비밀번호가 틀립니다.");
-	        		return;	        		
-	        	}
-	        	
-	        })  	
-	    });
+			Modalinit();	
+	        visibleTabID();
+			Validate1('N');
+			
+			//VisibleTabActiveID = $('.tab-pane.active').attr('id');			
+		
+	        $('#btnFindEmail').click(function(){
+	        	CheckFindEmail();
+			})	 
+			
+		    $('#btnWizardPrev').click(function(){
+		    	VisibleTabActiveID = $('.tab-pane.active').attr('id');		    	
+		    	TabIndex = VisibleTabActiveID.replace(TabTitleName,"");
+	        	alert("btnWizardPrev Index : " + TabIndex);
+			})	
+			
+		    $('#btnWizardNext').click(function(){
+		    	VisibleTabActiveID = $('.tab-pane.active').attr('id');
+		    	TabIndex = VisibleTabActiveID.replace(TabTitleName,"");
+		    	
+		    	var nextIdx = 0;
+		    	nextIdx = parseInt(TabIndex) + 1;		    	
+		    	var nextVisibleID = TabTitleName + String(nextIdx); 
+		    	
+	        	alert("btnWizardNext Index : " + TabIndex);
+	        	alert("btnWizardNext nextVisibleID : " + nextVisibleID);	        	
+			})	
+			
+			
+	    });		
+		
+		function visibleTabID() {
+			var TabFirstName = "bootstrap-wizard-validation-tab1";
+			VisibleTabActiveID = $('.tab-pane.active').attr('id');
+			
+			console.log("visibleTabID : " + VisibleTabActiveID);
+		}
+		
+		function Modalinit() {
+			$('#wizardName').val('');
+			$('#wizardconfirmPassword').val('');			
+		}
+		
+		function Validate1(sVal) {
+			
+			var TabFirstName = "bootstrap-wizard-validation-tab1";
+			var TabLastName =  "bootstrap-wizard-validation-tab4";
+			
+			VisibleTabActiveID = $('.tab-pane.active').attr('id');
+			
+			if(TabFirstName == VisibleTabActiveID) {
+				$("#btnWizardPrev").hide();
+			} else {
+				$("#btnWizardPrev").show();				
+			}
+			
+			if(TabLastName == VisibleTabActiveID) {
+				$("#btnWizardNext").hide();
+			} else {
+				$("#btnWizardNext").show();				
+			}
+			
+			
+			
+			console.log("Validate : " + sVal);
+			if(sVal=="N") {
+				$("#wizardName").attr("readonly",true);
+				$("#wizardName").attr("disabled",true);
+				$("#wizardpassword").attr("readonly",true);
+				$("#wizardpassword").attr("disabled",true);
+				$("#wizardconfirmPassword").attr("readonly",true);
+				$("#wizardconfirmPassword").attr("disabled",true);				
+			} else {
+				$("#wizardName").attr("readonly",false);
+				$("#wizardName").attr("disabled",false);
+				$("#wizardpassword").attr("readonly",false);
+				$("#wizardpassword").attr("disabled",false);
+				$("#wizardconfirmPassword").attr("readonly",false);
+				$("#wizardconfirmPassword").attr("disabled",false);				
+			}
+
+		}
+		
+		
+		
+		function CheckFindEmail() {
+			var filter = /^([\w-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([\w-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$/;
+			var sEmail = $('#wizardEmail').val();
+			if (!filter.test(sEmail)) {
+				alert("올바른 이메일 형식이 아닙니다.");            	
+            	return;				
+			} 
+			var param = { "Email" : sEmail};
+		    $.ajax({
+		        url : "/CheckEmail.do",
+		        contentType : "application/json; charset=utf-8",
+		        method : "POST",
+		        dataType : "json",
+		        data : JSON.stringify(param),
+		        success : function(data) {
+		            if (data.resultCODE == "S") {
+		            	//location.href = '/main.do';
+		            	alert('해당 이메일은 이미 가입이 되있습니다.!');
+		            	Validate1('N');		            	
+		            	return;
+		            } else if (data.resultCODE == "N") {
+		                alert('로그인 실패');
+		                Validate1('N');
+		            	return;
+		            } else {
+						$("#wizardEmail").attr("readonly",true);
+						$("#wizardEmail").attr("disabled",true);	
+		            	Validate1('Y');
+		            }     
+		        },
+		        error : function(data) {
+		            console.log("error data  : ", data.resultMsg);
+		            return false;                
+		        }
+		    }); 			
+		}
+		
+		function btnresisterPrev() {
+			alert("btnresisterPrev");
+		}
+		
+		function btnresisterNext() {
+			alert("btnresisterNext");			
+		}
+		
+		
 		
 		</script>
+        
         
         
         

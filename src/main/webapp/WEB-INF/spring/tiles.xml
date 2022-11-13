@@ -36,7 +36,8 @@
         <put-attribute name="LeftMenu"  value="/WEB-INF/views/tiles/include/falcon/LeftMenu.jsp" />
         <put-attribute name="Modal"  value="/WEB-INF/views/tiles/include/falcon/Modal.jsp" />                            
         <put-attribute name="Footer"  value="/WEB-INF/views/tiles/include/falcon/Footer.jsp" />
-        <put-attribute name="Setting"  value="/WEB-INF/views/tiles/include/falcon/Setting.jsp" />        
+        <put-attribute name="Setting"  value="/WEB-INF/views/tiles/include/falcon/Setting.jsp" />
+        <put-attribute name="alert"  value="/WEB-INF/views/tiles/include/falcon/alert.jsp" />                
     </definition>                               
     
     <definition name="*.FalconLayout" extends="FalconTemplete">
@@ -66,7 +67,8 @@
         <put-attribute name="LeftMenu"  value="/WEB-INF/views/tiles/include/falcon/LeftMenu.jsp" /> 
         <put-attribute name="Modal"  value="/WEB-INF/views/tiles/include/falcon/Modal.jsp" />                           
         <put-attribute name="Footer"  value="/WEB-INF/views/tiles/include/falcon/Footer.jsp" />
-        <put-attribute name="Setting"  value="/WEB-INF/views/tiles/include/falcon/Setting.jsp" />        
+        <put-attribute name="Setting"  value="/WEB-INF/views/tiles/include/falcon/Setting.jsp" />
+        <put-attribute name="alert"  value="/WEB-INF/views/tiles/include/falcon/alert.jsp" />                
     </definition>                               
     
     <definition name="*.FalconEmptyLayout" extends="FalconTempleteEmpty">

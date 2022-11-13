@@ -76,8 +76,16 @@
   <body>
     <tiles:insertAttribute name="content" />
     <tiles:insertAttribute name="Modal" />       
-    <tiles:insertAttribute name="Setting" />	
+    <tiles:insertAttribute name="Setting" />
+    <div style="display:none;">
+    	<tiles:insertAttribute name="alert" />
+    </div>
+    
+	<div id="divAlertMsg" style="display:none;"></div>
+	<button type="button" class="btn btn-primary" id="liveAlertBtn" style="display:none;"></button>    
+        
 	<tiles:insertAttribute name="IncludeJs" />
+        	
   </body>
 </html>
 
@@ -216,9 +224,11 @@
 		// 기본설정
 		$("a[href='/"+uid+"']").addClass("active");		
     });
-	
+
+	/*
 	function ShowModal(sVal){
 		console.log("ShowModal111 : " + sVal);
-	}	
+	}
+	*/
 </script>
 

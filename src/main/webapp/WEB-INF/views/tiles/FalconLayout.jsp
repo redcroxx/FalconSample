@@ -113,6 +113,10 @@
         </div>
       </div>
 	</main>
+    <div style="display:none;">
+    	<tiles:insertAttribute name="alert" />
+    </div>
+    
     <tiles:insertAttribute name="Setting" />	
 	<tiles:insertAttribute name="IncludeJs" />
   </body>
