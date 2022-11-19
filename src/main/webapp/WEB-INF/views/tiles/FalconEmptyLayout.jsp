@@ -53,7 +53,11 @@
     <link href="./resources/Falcon/js/vendors/choices/choices.min.css" rel="stylesheet">
     <link href="./resources/Falcon/js/vendors/dropzone/dropzone.min.css" rel="stylesheet">
     
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css"  rel="stylesheet" />    
+    <link href="./resources/Layer/css/layer.css" rel="stylesheet">
+    
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css"  rel="stylesheet" />
+	
+	    
     
     <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
     <script>
@@ -77,12 +81,15 @@
     <tiles:insertAttribute name="content" />
     <tiles:insertAttribute name="Modal" />       
     <tiles:insertAttribute name="Setting" />
+    
     <div style="display:none;">
     	<tiles:insertAttribute name="alert" />
     </div>
     
-	<div id="divAlertMsg" style="display:none;"></div>
-	<button type="button" class="btn btn-primary" id="liveAlertBtn" style="display:none;"></button>    
+    <a href="#layer2" class="btn-example" style="display:none;"></a>   
+    
+	<!-- div id="divAlertMsg" style="display:none;"></div>
+	<button type="button" class="btn btn-primary" id="liveAlertBtn" style="display:none;"></button-->
         
 	<tiles:insertAttribute name="IncludeJs" />
         	
@@ -222,7 +229,9 @@
 		}
 
 		// 기본설정
-		$("a[href='/"+uid+"']").addClass("active");		
+		$("a[href='/"+uid+"']").addClass("active");
+		
+		alertFormCreate11();
     });
 
 	/*

@@ -58,7 +58,8 @@
                       </div>
                       <div class="mb-3">
                         <!-- button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">Log in</button-->
-						<button class="btn btn-primary d-block w-100 mt-3" type="button" id="btnLogin">Log in</button>                        
+						<button class="btn btn-primary d-block w-100 mt-3" type="button" id="btnLogin">Log in661</button>
+						                     
                       </div>
                     </form>
                   </div>
@@ -96,12 +97,18 @@
 	function ValidCheck(){
 		
 		if($('#split-login-email').val() == "") {
-			alert("이메일이 입력되지 않았습니다.!");
+		    var $href = $('.btn-example').attr('href');
+		    var sVal = "이메일을 입력해주십시요.";
+		    //layer_popup($href, sVal);
+		    OpenAlert(sVal);
 			return;
 		}
 		
 		if($('#split-login-password').val() == "") {
-			alert("비밀번호가 입력되지 않았습니다");
+		    var $href = $('.btn-example').attr('href');
+		    var sVal = "비밀번호 입력해주십시요.";
+		    OpenAlert(sVal);
+		    //layer_popup($href, sVal);
 			return;
 		}		
 		
@@ -129,13 +136,14 @@
                 	if(data.resultMsg === "Success"){
                 		sBool = true;
                 	} else {
-                		alert("사용자 정보를 찾을수 없습니다.");     
+                		OpenAlert("사용자 정보를 찾을수 없습니다.");                		
                 		sBool = false;
                 	}
                 }
             },
             error : function(data) {
-                console.log("error result  : ", result);
+                //console.log("error result  : ", result);
+        		OpenAlert(result);                
             	sBool = false;                
             }
         });

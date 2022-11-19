@@ -66,6 +66,8 @@
     
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css"  rel="stylesheet" />    
     
+    <link href="./resources/Layer/css/layer.css" rel="stylesheet">
+    
     <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
     <script>
       var isRTL = JSON.parse(localStorage.getItem('isRTL'));
@@ -116,6 +118,8 @@
     <div style="display:none;">
     	<tiles:insertAttribute name="alert" />
     </div>
+    
+
     
     <tiles:insertAttribute name="Setting" />	
 	<tiles:insertAttribute name="IncludeJs" />
@@ -255,7 +259,9 @@
 		
 		
 		
-		$("a[href='/"+uid+"']").addClass("active");		
+		$("a[href='/"+uid+"']").addClass("active");
+		
+		alertFormCreate();		
     });
 </script>
 

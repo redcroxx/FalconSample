@@ -78,3 +78,5 @@
 	<!-- common -->    
     <script src="./resources/Falcon/js/AuthLogin.js"></script>        
     
+    <!-- Layer -->    
+    <script src="./resources/Layer/js/layer.js"></script>    
