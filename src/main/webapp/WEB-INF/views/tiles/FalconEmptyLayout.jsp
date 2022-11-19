@@ -85,7 +85,7 @@
     <div style="display:none;">
     	<tiles:insertAttribute name="alert" />
     </div>
-    
+    <!-- alert -->
     <a href="#layer2" class="btn-example" style="display:none;"></a>   
     
 	<!-- div id="divAlertMsg" style="display:none;"></div>
