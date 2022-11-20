@@ -1,0 +1,150 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00999
+
+
+
+
+
+
+
+
+
+
+
+
+  (
+I_BATCH_PRSS_MNG_NO			IN      VARCHAR2 ,			--배치처리관리번호
+I_ERROR_PRSS_OCCRRNC_DT			IN      VARCHAR2 ,			--오류처리발생일시
+I_ENG_TABLE_NM				IN      VARCHAR2 ,			--영문테이블명
+I_J1_ERROR_DATA_KEY_VAL			IN      VARCHAR2 ,			--제1오류데이터키값
+I_J2_ERROR_DATA_KEY_VAL			IN      VARCHAR2 ,			--제2오류데이터키값
+I_J3_ERROR_DATA_KEY_VAL			IN      VARCHAR2 ,			--제3오류데이터키값
+I_J4_ERROR_DATA_KEY_VAL			IN      VARCHAR2 ,			--제4오류데이터키값
+I_J5_ERROR_DATA_KEY_VAL			IN      VARCHAR2 ,			--제5오류데이터키값
+I_ERROR_DATA_CN				IN      VARCHAR2 ,			--오류데이터내용
+I_FRST_INPUSR_ID			IN      VARCHAR2 ,			--최초입력자아이디
+I_FRST_INPUT_DEPT_CD			IN      VARCHAR2 ,			--최초입력부서코드
+I_FRST_INPUT_BRFFC_CD			IN      VARCHAR2 ,			--최초입력지사코드
+I_FRST_INPUT_DT				IN      DATE ,				--최초입력일시
+I_LAST_UPDUSR_ID			IN      VARCHAR2 ,			--최종수정자아이디
+I_LAST_UPDT_DEPT_CD			IN      VARCHAR2 ,			--최종수정부서코드
+I_LAST_UPDT_BRFFC_CD			IN      VARCHAR2 ,			--최종수정지사코드
+I_LAST_UPDT_DT				IN      DATE ,				--최종수정일시
+O_ERR					IN OUT     VARCHAR2 ,  			--에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+O_ERRMSG				IN OUT     VARCHAR2    			--에러내용
+  )
+IS
+/*******************************************************************************
+    프로그램 ID  : PC_A_CM_00999
+    프로그램 명  : 배치 에러 발생시 에러 내역 등록
+		 PK는 MAX(I_BATCH_PRSS_MNG_NO + I_ERROR_PRSS_OCCRRNC_DT) + 1-> 	 T_ERROR_OCCRRNC_ORDR_NO(오류발생순서번호)
+
+    파 라 미 터  :
+			1 )I_BATCH_PRSS_MNG_NO			배치처리관리번호
+			2 )I_ERROR_PRSS_OCCRRNC_DT			오류처리발생일시
+			3 )I_ENG_TABLE_NM				영문테이블명
+			4 )I_J1_ERROR_DATA_KEY_VAL			제1오류데이터키값
+			5 )I_J2_ERROR_DATA_KEY_VAL			제2오류데이터키값
+			6 )I_J3_ERROR_DATA_KEY_VAL			제3오류데이터키값
+			7 )I_J4_ERROR_DATA_KEY_VAL			제4오류데이터키값
+			8 )I_J5_ERROR_DATA_KEY_VAL			제5오류데이터키값
+			9 )I_ERROR_DATA_CN				오류데이터내용
+			10)I_FRST_INPUSR_ID			최초입력자아이디 (NULL 처리)
+			11)I_FRST_INPUT_DEPT_CD			최초입력부서코드(NULL 처리)
+			12)I_FRST_INPUT_BRFFC_CD			최초입력지사코드(NULL 처리)
+			13)I_FRST_INPUT_DT				최초입력일시
+			14)I_LAST_UPDUSR_ID			최종수정자아이디(NULL 처리)
+			15)I_LAST_UPDT_DEPT_CD			최종수정부서코드(NULL 처리)
+			16)I_LAST_UPDT_BRFFC_CD			최종수정지사코드(NULL 처리)
+			17)I_LAST_UPDT_DT				최종수정일시
+			18)O_ERR					에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+			19)O_ERRMSG				에러내용
+
+    프로그램설명 : 1) 배치처리오류내역 등록  프로시져  -> 오류 발생시  A_CM_M00101_LOG 에 오류 내역 INSERT
+
+    <PK 규칙>
+	PK는 MAX(I_BATCH_PRSS_MNG_NO + I_ERROR_PRSS_OCCRRNC_DT) + 1-> 	 T_ERROR_OCCRRNC_ORDR_NO(오류발생순서번호) [연계키]
+
+
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-10-04   정해원     1. 최초작성
+ ****************************************************************************** */
+
+-- 0.선언
+  	T_ERROR_OCCRRNC_ORDR_NO   NUMBER := 0;
+
+BEGIN
+    O_ERR       := 1;				--에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+    O_ERRMSG	:= '정상처리되었습니다.';                                         -- 리턴 메시지
+
+
+     /*1. 비정상 입력값체크 */
+	IF (
+			I_BATCH_PRSS_MNG_NO	IS NULL
+ 		OR	I_ERROR_PRSS_OCCRRNC_DT	IS NULL
+ 		OR	I_ENG_TABLE_NM		IS NULL
+ 		OR	I_ERROR_DATA_CN   	IS NULL
+ 		OR	I_FRST_INPUT_DT		IS NULL
+ 		OR	I_LAST_UPDT_DT		IS NULL
+				   	) THEN
+       	 	O_ERR := -1;
+        	O_ERRMSG  := 'A_CM_M00101_LOG 변수중 비정상(NULL) 존재';
+			ROLLBACK ;
+			RETURN ;
+	END IF;
+
+  /*2. 기초 DB 가져옴 */
+	/* 기존 데이타 + 1 증가  */
+	BEGIN
+		SELECT	
+			COUNT(*) + 1 INTO T_ERROR_OCCRRNC_ORDR_NO
+          	FROM      USR_UBP.A_CM_M00101_LOG A
+		WHERE A.BATCH_PRSS_MNG_NO = I_BATCH_PRSS_MNG_NO
+		AND A.ERROR_PRSS_OCCRRNC_DT = I_ERROR_PRSS_OCCRRNC_DT
+		;
+        IF NVL(T_ERROR_OCCRRNC_ORDR_NO,0) = 0 THEN  --데이타 없는 경우
+	       	 	T_ERROR_OCCRRNC_ORDR_NO := 1; --시작값을 1로
+		END IF;
+        /* 혹은
+            EXCEPTION WHEN NO_DATA_FOUND THEN
+	       	 	T_ERROR_OCCRRNC_ORDR_NO := 1;    */
+		EXCEPTION WHEN OTHERS THEN
+       	 	T_ERROR_OCCRRNC_ORDR_NO := 1; --시작값을 1로
+	END;
+
+
+/* 3. 로직 처리 */
+
+
+/* 4. 로그 등록  처리 */
+
+INSERT INTO USR_UBP.A_CM_M00101_LOG (
+	BATCH_PRSS_MNG_NO		,ERROR_PRSS_OCCRRNC_DT		,ERROR_OCCRRNC_ORDR_NO
+	,ERROR_DATA_MANAGT_YN		,ERROR_DATA_MANAGT_DY		,ENG_TABLE_NM
+	,J1_ERROR_DATA_KEY_VAL		,J2_ERROR_DATA_KEY_VAL		,J3_ERROR_DATA_KEY_VAL
+	,J4_ERROR_DATA_KEY_VAL		,J5_ERROR_DATA_KEY_VAL		,ERROR_DATA_CN
+	,RM_CN				,FRST_INPUSR_ID			,FRST_INPUT_DEPT_CD
+	,FRST_INPUT_BRFFC_CD		,FRST_INPUT_DT			,LAST_UPDUSR_ID
+	,LAST_UPDT_DEPT_CD		,LAST_UPDT_BRFFC_CD		,LAST_UPDT_DT  )
+VALUES (
+	I_BATCH_PRSS_MNG_NO		,I_ERROR_PRSS_OCCRRNC_DT	,T_ERROR_OCCRRNC_ORDR_NO
+	,'N'				,''				,I_ENG_TABLE_NM
+	,I_J1_ERROR_DATA_KEY_VAL	,I_J2_ERROR_DATA_KEY_VAL	,I_J3_ERROR_DATA_KEY_VAL
+	,I_J4_ERROR_DATA_KEY_VAL	,I_J5_ERROR_DATA_KEY_VAL	,I_ERROR_DATA_CN
+	,''				,I_FRST_INPUSR_ID		,I_FRST_INPUT_DEPT_CD
+	,I_FRST_INPUT_BRFFC_CD		,I_FRST_INPUT_DT		,I_LAST_UPDUSR_ID
+	,I_LAST_UPDT_DEPT_CD		,I_LAST_UPDT_BRFFC_CD		,I_LAST_UPDT_DT	  ) ;
+
+
+	EXCEPTION WHEN OTHERS THEN
+   	 	O_ERR := -1;
+       	O_ERRMSG  := 'A_CM_M00101_LOG 비정상 오류 발생' || SQLERRM;
+		ROLLBACK ;
+		RETURN ;
+
+END;
+/

@@ -1,0 +1,431 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00053
+
+
+
+
+
+
+
+  ( I_DEBUG IN VARCHAR2  )
+IS
+/*******************************************************************************
+    프로그램 ID  : PC_A_CM_00053
+    프로그램 명   : 이해관계인병합후보추천
+ 사업장 배치
+
+    파 라 미 터  : 1)
+    프로그램설명   : 1) 이해관계인 병합은 연계 데이터가 없으므로 성명,생년월,사업장등록번호로 후보추천
+    
+    병합후보조건   : 1) 병합후보추천 테이블 삭제시 병합처리구분코드가 비대상, 병합완료 행은 제외               
+                2) 이름, 주민번호, 우편번호, 생년월일 로 후보추천 검사                                  
+                3) 이해관계인테이블에서 병합구분이 0(미병합) 과 2(병합대표)만 조회                   
+                4) 병합대표 조건 : 병합구분코드 DESC, 정상임시구분 DESC, 수정일시 DESC           
+                5) 병합대표가 정상임시구분 값이 정상이 아닌 경우 병합제외 
+                6) 대표자명이 미상일 경우 제외                                          
+                7) 병합후보추천 테이블에 KEY 존재할 경우 제외                               
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-10-01   정해원     1. 최초작성
+ ****************************************************************************** */
+-- 0.선언
+    T_NO                    NUMBER             := 0 ;
+    T_ROWCNT                NUMBER             := 0 ;
+    T_BATCH_TRGET_TOT_CNT   NUMBER             := 0 ;
+    T_NRMLT_PRSS_CO         NUMBER             := 0 ;
+    T_EXCP_PRSS_CO          NUMBER             := 0 ;
+    T_ERROR_PRSS_CO         NUMBER             := 0 ;
+    T_DATE                  DATE               := SYSDATE ;
+    T_SDATE                 DATE               := SYSDATE ;
+    T_EDATE                 DATE               := SYSDATE ;
+    T_MSG                   VARCHAR2(2000)     := '';
+    T_ERR_FLAG              CHAR(1)            := '0';
+    T_ERR_KEY1              VARCHAR2(50)       := ' ';
+    T_ERR_KEY2              VARCHAR2(50)       := ' ';
+    T_ERR_KEY3              VARCHAR2(50)       := ' ';
+    T_ERR_KEY4              VARCHAR2(50)       := ' ';
+    T_ERR_KEY5              VARCHAR2(50)       := ' ';
+    O_ERR                   NUMBER             := 0 ;
+    O_ERRMSG                VARCHAR2(1000)     := ' ';
+    T_CRUD_GU               CHAR(1)            := 'C';
+    T_PROC_ID               VARCHAR2(10)       := '53';
+    T_PROC_NM               VARCHAR2(50)       := 'PC_A_CM_00053';
+    T_TABLE_NM              VARCHAR2(50)       := 'A_CM_B00100';
+
+    T_BATCH_PRSS_MNG_NO VARCHAR2(11)           := '';
+    
+    /*추가*/
+    T_EXCEPT_GROUP_NO       NUMBER             := 0; /*병합후보추천 목록에서 제외할 그룹번호*/
+    T_EXCEPT_MRG_TOT_CNT    NUMBER             := 0;
+    T_EXCEPT_TOT_CNT        NUMBER             := 0; 
+    T_EXCEPT_ROWCNT         NUMBER             := 0; 
+    
+
+/* 이해관계인 병합후보추천목록 데이터조회 */
+CURSOR C1 IS
+    SELECT
+            DECODE(AA.MRG_REPRSNT_CNDCY_ORDER, '1', DECODE(AA.UDSRLH_NRMLT_TMPR_YN, 'Y', 'Y', 'N'),'N') AS MRG_REPRSNT_CNDCY_YN /*병합대표임시여부*/
+            , AA.*
+    FROM 
+        (
+            SELECT /*+ USE_NL(A)*/
+                    TO_CHAR(SYSDATE, 'YYYYMMDD') AS MRG_RECOMEND_DY, /*병합추천일자*/
+                    --'20161025' AS MRG_RECOMEND_DY, /*병합추천일자*/
+                    B.UDSRLH_KMAP_MNG_NO,                            /*이해관계인키맵관리번호*/
+                    '1'         AS MRG_RECOMEND_SE_CD,               /*병합추천구분코드*/
+                    DENSE_RANK() OVER(ORDER BY A.UDSRLH_NM,A.UDSRLH_IHIDNUM ,A.UDSRLH_ZIP, A.UDSRLH_BRTHDY )    AS MRG_RECOMEND_GROUP_NO,  /*병합추천그룹번호*/
+                    ROW_NUMBER() OVER( PARTITION BY A.UDSRLH_NM,A.UDSRLH_IHIDNUM ,A.UDSRLH_ZIP, A.UDSRLH_BRTHDY ORDER BY B.UDSRLH_MRG_SE_CD DESC,A.UDSRLH_NRMLT_TMPR_YN DESC,B.LAST_UPDT_DT DESC )
+                              AS MRG_REPRSNT_CNDCY_ORDER,            /*병합대표후보순서*/
+                    COUNT(1) OVER (PARTITION BY A.UDSRLH_NM,A.UDSRLH_IHIDNUM ,A.UDSRLH_ZIP, A.UDSRLH_BRTHDY) TOT_CNT,   /* 그룹별 총 개수 */    
+                    B.UDSRLH_MRG_SE_CD  AS MRG_PROCESS_SE_CD,        /*병합처리구분코드*/
+                    '성명, 주민번호, 우편번호가 동일한 이해관계인을 병합후보로 추천'     AS MRG_RECOMEND_RESN_CN,   /*병합추천사유내용*/
+                    B.FRST_INPUSR_ID,                                /*최초입력자아이디*/
+                    B.FRST_INPUT_DEPT_CD,                            /*최초입력부서코드*/
+                    B.FRST_INPUT_BRFFC_CD,                           /*최초입력지사코드*/
+                    B.FRST_INPUT_DT,                                 /*최초입력일시*/
+                    NULL        AS LAST_UPDUSR_ID,                   /*최종수정자아이디*/
+                    NULL        AS LAST_UPDT_DEPT_CD,                /*최종수정부서코드*/
+                    NULL        AS LAST_UPDT_BRFFC_CD,               /*최종수정지사코드*/
+                    SYSDATE     AS LAST_UPDT_DT                      /*최종수정일시*/
+                    ,A.UDSRLH_NM                                     /*이해관계인 명*/
+                    ,A.UDSRLH_IHIDNUM                                /*이해관계인 주민번호*/
+                    ,A.UDSRLH_ZIP                                    /*이해관계인 우편번호*/
+                    ,A.UDSRLH_MNG_NO                                 /*이해관계인 관리번호*/
+                    ,B.LAST_UPDT_DT AS  BEFF_LAST_UPDT_DT            /*변경전 최종수정일시 */
+                    ,A.UDSRLH_NRMLT_TMPR_YN                          /*이해관계인 정상임시여부*/
+            FROM 
+                    USR_UBP.A_CM_B00100 A, USR_UBP.A_CM_B00101 B
+            WHERE   1=1
+                    AND A.UDSRLH_MNG_NO = B.UDSRLH_MRG_MNG_NO
+                    AND A.UDSRLH_MNG_NO > ' '        
+                    AND (A.UDSRLH_NM, NVL(A.UDSRLH_IHIDNUM,'NULL'), NVL(A.UDSRLH_ZIP,'NULL'), NVL(A.UDSRLH_BRTHDY, 'NULL')) IN (
+                            SELECT 
+                                    UDSRLH_NM
+                                    ,NVL(UDSRLH_IHIDNUM, 'NULL')
+                                    ,NVL(UDSRLH_ZIP,'NULL')
+                                    ,NVL(UDSRLH_BRTHDY, 'NULL')
+                            FROM(
+                                SELECT 
+                                        UDSRLH_NM
+                                        ,UDSRLH_IHIDNUM
+                                        ,UDSRLH_ZIP
+                                        ,UDSRLH_BRTHDY
+                                        , SUM(CNT) AS CNT
+                                FROM (
+                                        SELECT 
+                                                UDSRLH_NM
+                                                ,UDSRLH_IHIDNUM
+                                                ,UDSRLH_ZIP
+                                                ,UDSRLH_BRTHDY
+                                                , '1' AS CNT
+                                        FROM
+                                                USR_UBP.A_CM_B00100 A   /*이해관계인 마스터*/
+                                        WHERE   1=1 
+                                )
+                                GROUP BY UDSRLH_NM ,UDSRLH_IHIDNUM ,UDSRLH_ZIP, UDSRLH_BRTHDY
+                                HAVING SUM(CNT) > 1
+                            )
+                        )
+                    AND B.UDSRLH_MRG_SE_CD IN ( '0', '2' )
+                    AND UDSRLH_KMAP_MNG_NO NOT IN ( /* 병합후보추천 테이블에 병합/병합대상제외(1,3)의 키맵관리번호를 제외한다. */
+                                                SELECT 
+                                                        UDSRLH_KMAP_MNG_NO 
+                                                FROM
+                                                        USR_UBP.A_CM_B00103
+                                                WHERE   1=1
+                                                        AND MRG_RECOMEND_DY BETWEEN '00000000' AND '99999999'   
+                                                        AND MRG_PROCESS_SE_CD NOT IN ('0','1')  /*병합처리구분 : 미병합(0)이 아닌 것*/
+                                            )     
+        ) AA
+    WHERE   1=1    
+     ORDER BY MRG_RECOMEND_GROUP_NO, MRG_REPRSNT_CNDCY_ORDER
+     ;
+
+
+/* 이해관계인 병합후보추천 테이블 데이터조회 */
+CURSOR C2 IS 
+    SELECT
+            MRG_RECOMEND_DY
+            ,MRG_RECOMEND_GROUP_NO
+            ,UDSRLH_KMAP_MNG_NO
+    FROM
+            USR_UBP.A_CM_B00103
+    WHERE   1=1
+            AND MRG_RECOMEND_DY BETWEEN '00000000' AND '99999999' 
+    ;
+
+/* 1ROW = 오늘날짜 기준  병합처리구분코드 값이 1(병합완료)인 이해관계인 수
+   2ROW = 오늘날짜 기준 이해관계인 총 수
+ */
+CURSOR C3 IS
+    SELECT
+            COUNT(1) AS A_CM_B00103_TOT_CNT
+    FROM
+            USR_UBP.A_CM_B00103
+    WHERE   1=1
+            AND MRG_RECOMEND_DY BETWEEN TO_CHAR(SYSDATE, 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+            AND MRG_PROCESS_SE_CD = '1' /*병합처리구분코드 값이 1(병합완료)*/
+    UNION
+    SELECT
+            COUNT(1) AS A_CM_B00103_TOT_CNT
+    FROM
+            USR_UBP.A_CM_B00103
+    WHERE   1=1
+            AND MRG_RECOMEND_DY BETWEEN TO_CHAR(SYSDATE, 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')
+    ;
+    
+BEGIN
+    T_MSG := T_PROC_NM ||' START! ';
+    
+    /* TODAY에 데이터가 존재하는지 체크 및 데이터가 있을경우(배치 2번이상일경우) 병합완료 목록이 있는지 없는지 여부 체크/ 있을경우 하위 쿼리 실행불가 / 없을경우 TODAY 데이터 전체 삭제후 하위 쿼리 실행 */
+    FOR AA3 IN C3 LOOP
+        
+        IF T_EXCEPT_ROWCNT = 0 THEN T_EXCEPT_MRG_TOT_CNT := AA3.A_CM_B00103_TOT_CNT;
+        
+            ELSE T_EXCEPT_TOT_CNT := AA3.A_CM_B00103_TOT_CNT;
+            
+        END IF; 
+        
+        T_EXCEPT_ROWCNT := T_EXCEPT_ROWCNT +1;
+        
+    
+    END LOOP; 
+    
+    IF T_EXCEPT_MRG_TOT_CNT > 0 THEN    /* 병합후보추천 테이블에 TODAY로 병합완료 목록이 있는 경우 */
+        IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(TO_CHAR(SYSDATE,'YYYY-MM-DD') || ' 에는 병합완료 목록이 존재하여, 하위 쿼리를 실행 할 수 없음'); END IF;
+    ELSE
+        IF T_EXCEPT_TOT_CNT = 0 THEN    /* 병합후보추천 테이블에 TODAY로  목록이 없는 경우 */
+            /*병합후보추천테이블 삭제: 병합처리구분코드가 비대상, 병합완료 행은 제외*/ 
+            DELETE FROM /*+ RULE*/
+                        USR_UBP.A_CM_B00103
+               WHERE    1=1
+                        AND MRG_PROCESS_SE_CD = '0' /*병합처리구분 : 미병합(0)*/
+                        AND MRG_RECOMEND_DY BETWEEN '00000000' AND '99999999'   
+                        ;     
+        ELSE
+            DELETE FROM /*+ RULE*/
+                        USR_UBP.A_CM_B00103
+               WHERE    1=1
+                        AND MRG_RECOMEND_DY = TO_CHAR(SYSDATE,'YYYYMMDD');
+     
+        END IF;
+                 /* 배치처리관리번호 채번 */
+                SELECT /*+ INDEX_DESC(A A_CM_M00101_PK) */
+                            LPAD(TO_NUMBER(MAX(BATCH_PRSS_MNG_NO)) +1 ,11,'0')  INTO     T_BATCH_PRSS_MNG_NO
+                    FROM USR_UBP.A_CM_M00101 A
+                WHERE A.BATCH_PRSS_MNG_NO <= '99999999999'
+                AND ROWNUM = 1 ;
+
+            IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+            FOR AA1 IN  C1 LOOP
+                T_ROWCNT  := T_ROWCNT + 1;
+                T_ERR_FLAG := '0';
+                
+                /*제외할 그룹번호와 같은 경우*/
+                IF T_EXCEPT_GROUP_NO = AA1.MRG_RECOMEND_GROUP_NO THEN CONTINUE; END IF;
+                
+                /*현재 몇번째 로우까지 */
+                IF MOD(T_ROWCNT,10) = 0 THEN
+                    T_MSG := T_PROC_NM ||' ROWCOUNT = '||  TO_CHAR(T_ROWCNT) ;
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                END IF ;
+                
+                IF AA1.UDSRLH_NM = '미상' THEN CONTINUE;
+                    /*이해관계인명이 미상 일경우 제외*/
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line('이해관계인명 : 미상 이므로 CONTINUE 처리'); END IF ;
+                END IF;
+                
+                /*그룹된 ROW 수가 1인경우 제외*/
+                IF AA1.TOT_CNT = 1 THEN CONTINUE; END IF;
+                
+                /*제외할 그룹번호 체크*/
+                IF AA1.MRG_REPRSNT_CNDCY_ORDER = '1' THEN
+                    IF AA1.UDSRLH_NRMLT_TMPR_YN = 'N' THEN 
+                        T_EXCEPT_GROUP_NO := AA1.MRG_RECOMEND_GROUP_NO;
+                        T_MSG :=  T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '제외할 그룹번호 : ' || AA1.MRG_RECOMEND_GROUP_NO  ;
+                        IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                        CONTINUE;
+                    END IF;
+                END IF;     
+
+                /*INSERT 하기 전 중복체크 (추천일자 /  이해관계인키맵관리번호)*/
+                FOR AA2 IN C2 LOOP
+                   -- IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line('확인1 '); END IF ;
+                    IF AA2.MRG_RECOMEND_DY = AA1.MRG_RECOMEND_DY THEN
+                     --   IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line('확인2'); END IF ; 
+                       -- IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(AA1.UDSRLH_KMAP_MNG_NO || ' ' || AA1.UDSRLH_KMAP_MNG_NO); END IF ;
+                            IF AA2.UDSRLH_KMAP_MNG_NO = AA1.UDSRLH_KMAP_MNG_NO  THEN
+                                T_ERR_FLAG := '1';
+                                IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '' ||  '중복 ROW 발생'  ); END IF ;
+                            END IF;
+                    END IF; 
+                END LOOP;
+                
+                
+                
+                /*사업장키맵관리번호 NULL 체크*/
+                IF AA1.UDSRLH_KMAP_MNG_NO IS NULL THEN
+                    T_MSG := T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  'UDSRLH_KMAP_MNG_NO NULL 오류 '  ;
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                    T_ERR_FLAG := '1';
+                END IF;
+                
+                /*병합추천구분코드 NULL 체크*/
+                IF AA1.MRG_RECOMEND_SE_CD IS NULL THEN
+                    T_MSG := T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  'MRG_RECOMEND_SE_CD NULL 오류 '  ;
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                    T_ERR_FLAG := '1';
+                END IF;
+                
+                /*병합추천일자 NULL 체크*/
+                IF AA1.MRG_RECOMEND_DY IS NULL THEN
+                    T_MSG := T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  'MRG_RECOMEND_DY NULL 오류 '  ;
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                    T_ERR_FLAG := '1';
+                END IF;
+                
+                /*병합추천그룹번호 NULL 체크*/
+                IF AA1.MRG_RECOMEND_GROUP_NO IS NULL THEN
+                    T_MSG := T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  'MRG_RECOMEND_GROUP_NO NULL 오류 '  ;
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                    T_ERR_FLAG := '1';
+                END IF;
+                
+                /*병합대표후보여부 NULL 체크*/
+                IF AA1.MRG_REPRSNT_CNDCY_YN IS NULL THEN
+                    T_MSG := T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  'MRG_REPRSNT_CNDCY_YN NULL 오류 '  ;
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                    T_ERR_FLAG := '1';
+                END IF;
+                
+                /*병합처리구분코드 NULL 체크*/
+                IF AA1.MRG_PROCESS_SE_CD IS NULL THEN
+                    T_MSG := T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  'MRG_PROCESS_SE_CD NULL 오류 '  ;
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                    T_ERR_FLAG := '1';
+                END IF;
+                       
+            
+
+                IF T_ERR_FLAG = '1' THEN            --오류 발생시 처리
+                    T_ERR_KEY1 := AA1.UDSRLH_MNG_NO  ;
+                    T_ERR_KEY2 := AA1.UDSRLH_KMAP_MNG_NO  ;
+                    T_ERR_KEY3 := ''  ;
+                    T_ERR_KEY4 := ''  ;
+                    T_ERR_KEY5 := ''  ;
+
+
+                    USR_UBP.PC_A_CM_00999(T_BATCH_PRSS_MNG_NO,TO_CHAR(SYSDATE,'RRRRMMDDHHMMSS') ,  T_TABLE_NM
+                                            ,T_ERR_KEY1,T_ERR_KEY2,T_ERR_KEY3        ,T_ERR_KEY4,T_ERR_KEY5,T_MSG
+                                            ,'','','',SYSDATE
+                                            ,'','','',SYSDATE
+                                                ,O_ERR,O_ERRMSG) ;
+
+                    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                    T_ERROR_PRSS_CO    := T_ERROR_PRSS_CO     + 1;
+                ELSE    --정상일 경우
+                    T_NRMLT_PRSS_CO :=     T_NRMLT_PRSS_CO + 1 ;
+                    CASE T_CRUD_GU  --처리 구분
+                         WHEN 'C'    THEN    -- 신규
+                            INSERT INTO USR_UBP.A_CM_B00103(
+                                            LAST_UPDT_DT,           /*최종수정일시*/
+                                            LAST_UPDT_BRFFC_CD,     /*최종수정지사코드*/
+                                            LAST_UPDT_DEPT_CD,      /*최종수정부서코드*/
+                                            LAST_UPDUSR_ID,         /*최종수정자아이디*/
+                                            FRST_INPUT_DT,          /*최초입력일시*/
+                                            FRST_INPUT_BRFFC_CD,    /*최초입력지사코드*/
+                                            FRST_INPUT_DEPT_CD,     /*최초입력부서코드*/
+                                            FRST_INPUSR_ID,         /*최초입력자아이디*/
+                                            MRG_RECOMEND_RESN_CN,   /*병합추천사유내용*/
+                                            /*MRG_PROCESS_DY,         병합처리일자*/
+                                            MRG_PROCESS_SE_CD,      /*병합처리구분코드*/
+                                            MRG_RECOMEND_GROUP_NO,  /*병합추천그룹번호*/
+                                            MRG_RECOMEND_DY,        /*병합추천일자*/
+                                            MRG_RECOMEND_SE_CD,     /*병합추천구분코드*/
+                                            UDSRLH_KMAP_MNG_NO,     /*통합사업장사업관계키맵관리번호*/
+                                            MRG_REPRSNT_CNDCY_YN    /*병합대표후보*/
+                                        )
+                                        VALUES(
+                                           AA1.LAST_UPDT_DT
+                                           ,AA1.LAST_UPDT_BRFFC_CD
+                                           ,AA1.LAST_UPDT_DEPT_CD
+                                           ,AA1.LAST_UPDUSR_ID
+                                           ,AA1.FRST_INPUT_DT
+                                           ,AA1.FRST_INPUT_BRFFC_CD
+                                           ,AA1.FRST_INPUT_DEPT_CD
+                                           ,AA1.FRST_INPUSR_ID
+                                           ,AA1.MRG_RECOMEND_RESN_CN
+                                           ,DECODE(AA1.MRG_PROCESS_SE_CD, '2', '0',AA1.MRG_PROCESS_SE_CD) 
+                                           ,AA1.MRG_RECOMEND_GROUP_NO
+                                           ,AA1.MRG_RECOMEND_DY
+                                           ,AA1.MRG_RECOMEND_SE_CD
+                                           ,AA1.UDSRLH_KMAP_MNG_NO 
+                                           ,AA1.MRG_REPRSNT_CNDCY_YN
+                                        );
+                            
+                             T_MSG := T_PROC_NM ||' INSERT 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+                             IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                             
+                            
+                             
+                         WHEN 'U'    THEN    -- 수정
+                            T_MSG := T_PROC_NM ||' UPDATE 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+                            IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                            
+                         WHEN 'D'    THEN    -- 삭제
+                            T_NRMLT_PRSS_CO :=     T_NRMLT_PRSS_CO + 1 ;
+                            T_MSG := T_PROC_NM ||' DELETE 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+                            IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+                      END CASE;
+
+                   END IF ;
+          END LOOP;      
+        
+               
+    END IF;
+    
+        
+        
+        
+ 
+
+    T_MSG := '---END---';
+    IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+
+    T_BATCH_TRGET_TOT_CNT := T_ROWCNT ;
+    T_EDATE := SYSDATE ;
+      
+    USR_UBP.PC_A_CM_00998(T_PROC_ID,T_SDATE ,T_EDATE ,T_BATCH_TRGET_TOT_CNT
+                            ,T_NRMLT_PRSS_CO,T_EXCP_PRSS_CO,T_ERROR_PRSS_CO, '비고','','','',SYSDATE,O_ERR,O_ERRMSG) ;
+
+   COMMIT;
+  
+
+    EXCEPTION WHEN OTHERS THEN
+            DBMS_OUTPUT.Put_Line('ERROR : ' || SQLERRM); 
+            ROLLBACK ;
+                    
+                    T_MSG := T_PROC_NM ||' INSERT 처리 = '||  TO_CHAR(T_ROWCNT) || ' : ' || SQLERRM ;
+                    
+                    T_ERR_KEY1 := ''  ;
+                    T_ERR_KEY2 := ''  ;
+                    T_ERR_KEY3 := ''  ;
+                    T_ERR_KEY4 := ''  ;
+                    T_ERR_KEY5 := ''  ;
+
+
+                    USR_UBP.PC_A_CM_00999(T_BATCH_PRSS_MNG_NO,TO_CHAR(SYSDATE,'RRRRMMDDHHMMSS') ,  T_TABLE_NM
+                                            ,T_ERR_KEY1,T_ERR_KEY2,T_ERR_KEY3        ,T_ERR_KEY4,T_ERR_KEY5,T_MSG
+                                            ,'','','',SYSDATE
+                                            ,'','','',SYSDATE
+                                                ,O_ERR,O_ERRMSG) ;
+            
+            RETURN ;
+
+END;
+/

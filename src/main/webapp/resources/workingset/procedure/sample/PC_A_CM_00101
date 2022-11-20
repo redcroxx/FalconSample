@@ -1,0 +1,240 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00101
+
+
+
+
+
+
+
+
+
+  (
+   	I_UKEY_GNB_SE_CD 		IN      VARCHAR2 ,		-- 통합채번키 구분코드
+  	I_BPLC_MNG_NO   		IN   	VARCHAR2 ,		-- 사업장관리번호
+  	I_BSBGN_NO				IN   	VARCHAR2 ,  	-- 사업개시번호
+  	I_BSBGN_ORDR_NO   		IN   	NUMBER,  		-- 사업개시순서번호
+ 	I_FRST_INPUSR_ID 		IN   	VARCHAR2 ,		-- 최초입력자아이디
+	I_FRST_INPUT_DEPT_CD 	IN      VARCHAR2 ,		-- 최초입력부서코드
+	I_FRST_INPUT_BRFFC_CD	IN      VARCHAR2 ,		-- 최초입력지사코드
+	I_FRST_INPUT_DT			IN 		DATE ,			-- 최초입력일시
+  	O_BPLC_MNG_NO   		OUT  	VARCHAR2 ,		-- 사업장관리번호
+  	O_BSBGN_NO				OUT  	VARCHAR2 ,  	-- 사업개시번호
+ 	O_BSBGN_ORDR_NO   		OUT  	NUMBER,  		-- 사업개시순서번호
+  	O_UKEY_MNG_NO       	OUT   	VARCHAR2 ,		-- 사업장관리번호
+  	O_UKEY_MAP_MNG_NO   	OUT   	VARCHAR2 ,		-- 사업장키맵관리번호
+	O_ERR					OUT 	NUMBER, 		--에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+	O_ERRMSG				OUT	VARCHAR2 			--에러내용
+  )
+IS
+/*******************************************************************************
+    프로그램 ID  : PC_A_CM_00101
+    프로그램 명  : 데이터 이행 후 검증 결과를 저장하는 프로시저
+                   MASTER 프로시저 호출 후 성공이면 DETAIL 처리
+                   일괄 COMMIT
+
+    파 라 미 터  : 1)I_UKEY_GNB_SE_CD			통합채번키 구분코드
+		(1:근복단사업장 2:안보단임시사업장 3:안보단고유사업장 4:노동부임시사업장 9:이해관계인 )
+                   2)I_BPLC_MNG_NO   			사업장관리번호
+                   3)I_BSBGN_NO				사업개시번호
+                   4)I_BSBGN_ORDR_NO   			사업개시순서번호
+                   5)O_BPLC_MNG_NO   			사업장관리번호
+                   6)O_BSBGN_NO				사업개시번호
+                   7)O_BSBGN_ORDR_NO   			사업개시순서번호
+                   8)I_FRST_INPUSR_ID 			최초입력자아이디
+                   9)I_FRST_INPUT_DEPT_CD 		최초입력부서코드
+		   			10)I_FRST_INPUT_BRFFC_CD		최초입력지사코드
+		   			11)I_FRST_INPUT_DT			최초입력일시
+		   			12)O_UKEY_MNG_NO				통합사업장관리번호
+		   			13)O_UKEY_MAP_MNG_NO   		통합사업장키맵관리번호
+		   			14)O_ERR 			에러리턴값
+		   			15)O_UKEY_MAP_MNG_NO 에러메시지
+
+    프로그램설명 : 1) 통합키채번  프로시져  -> 채번하고
+				  A_CM_A00099 를 읽고 채번하고 INSERT
+
+    <채번 규칙>
+	[연계키]
+		- 근복단에서 제공된 사업장은 근복단키를 사용한다.
+	[고용노동부 임시사업장 채번규칙]  --> 참고용]
+		- 사업장관리번호    :  기존유지
+		- 사업개시번호       :  기존유지 ~ 00000000000('0' 11자리)
+		- 사업개시순서번호 :  0
+	[안전보건공단 임시사업장 채번규칙]
+		- 사업장관리번호    :  기존유지  - 년도(4) + 9  + 일련번호(6)
+		- 사업개시번호       :  기존유지 ~ 00000000000('0' 11자리)
+		- 사업개시순서번호 :  0 <----- 추가예정
+	[안전보건공단 고유사업장 채번규칙]
+		- 사업장관리번호 = 근복단사업장관리번호
+		- 사업개시번호    = 근복단사업개시번호
+		- 사업개시순서번호 :  1 부터 순차적으로 증가
+
+	[이해관계인 채번규칙]
+		- 사업장관리번호 = '00000000000'
+		- 사업개시번호    = '00000000000'
+		- 사업개시순서번호 :  0
+
+
+	[안전공단 내부키 채번규칙]
+		- 키구분(2자리) + 일련번호(9자리)
+	통합키 채번 구분 코드
+	통합사업장관리번호(01)/통합사업장사업관계키맵관리번호(02)[근복단정상사업장](1)
+	통합사업장관리번호(03)/통합사업장사업관계키맵관리번호(04)[안전보건공단임시사업장](2)
+	통합사업장관리번호(05)/통합사업장사업관계키맵관리번호(06)[안전보건공단고유사업장](3)
+	통합사업장관리번호(07)/통합사업장사업관계키맵관리번호(08)[고용노동부임시사업장](4)
+	이해관계인관리번호(11)/이해관계인키맵관리번호(12)(9)
+
+
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-09-20   정해원     1. 최초작성
+ ****************************************************************************** */
+-- 0.선언
+  	T_UKEY_MNG_NO 	VARCHAR2(11) 	:= '00000000000';  	-- 공통 채번번호
+    T_BPLC_MNG_NO 	VARCHAR2(11) 	:= '00000000000';  	--사업장관리번호
+	T_BSBGN_NO 		VARCHAR2(11) 	:= '00000000000';  	--사업개시번호
+    T_BSBGN_ORDR_NO	NUMBER		 	:= 0 ;				--사업개시순서번호
+	T_KEY_GU  		VARCHAR2(2)		:= '' ; 			--통합 사업장 구분
+	T_KEYMAP_GU  	VARCHAR2(2)		:= '' ; 			--통합 사업장 키맵 구분
+
+BEGIN
+    O_ERR       := 1;				--에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+    O_ERRMSG	:= '정상처리되었습니다.';                                         -- 리턴 메시지
+
+     /*1. 비정상 입력값체크 */
+	IF (
+			I_UKEY_GNB_SE_CD	IS NULL
+ 		OR	I_BPLC_MNG_NO		IS NULL
+ 		OR  I_BSBGN_NO		IS NULL
+ 		OR  I_BSBGN_ORDR_NO   	IS NULL
+ 		OR 	I_FRST_INPUSR_ID 	IS NULL
+ 		OR	I_FRST_INPUT_DT		IS NULL
+				   	) THEN
+       	 	O_ERR := -1;
+        	O_ERRMSG  := 'PC_A_CM_00101 변수중 비정상(NULL) 존재';
+			ROLLBACK ;
+			RETURN ;
+	END IF;
+
+  /*2. 기초 DB 가져옴 */
+	/* 통합사업장 및 키맵 채번을 위한 9자리 가지고 옴 */
+	BEGIN
+		SELECT /*+ INDEX_DESC(A A_CM_A00099_PK) */
+   		     	LPAD(NVL(TO_NUMBER(MAX(SUBSTR(UKEY_MNG_NO,3))+1),1),9,'0') INTO   T_UKEY_MNG_NO
+			FROM USR_UBP.A_CM_A00099 A
+		WHERE A.UKEY_GNB_SE_CD = I_UKEY_GNB_SE_CD
+		AND A.UKEY_MNG_NO <= '99999999999'
+		AND ROWNUM = 1 ;
+
+		EXCEPTION WHEN OTHERS THEN
+       	 	O_ERR := -1;
+        	O_ERRMSG  := 'PC_A_CM_00101 비정상 오류 발생';
+			ROLLBACK ;
+			RETURN ;
+
+	END;
+
+/*3. 입력 케이스 조합 및 사업장 관리번호 개시번호, 순서 번호 작성  */
+
+  	CASE I_UKEY_GNB_SE_CD
+ 		WHEN '1'	THEN	-- 근복단 정상 사업장은 받은 그대로 넘김
+			T_KEY_GU  		:= '01' ;
+			T_KEYMAP_GU 	:= '02' ;
+		    T_BPLC_MNG_NO 	:= I_BPLC_MNG_NO;  	--사업장관리번호
+			T_BSBGN_NO 		:= I_BSBGN_NO;  	--사업개시번호
+    		T_BSBGN_ORDR_NO	:= I_BSBGN_ORDR_NO ;				--사업개시순서번호
+
+ 		WHEN '2'	THEN				--안전보건공단임시사업장일 경우
+			T_KEY_GU  	:= '03' ;
+			T_KEYMAP_GU := '04' ;
+
+			/* 년도 넘어가면 리셋 처리 필수 */
+			/*임시사업장 사업장관리번호 채번쿼리*/
+
+			SELECT  /*+ INDEX_DESC(A A_CM_A00099_PK) */
+    				  TO_CHAR(SYSDATE , 'YYYY')      || '9' || LPAD(NVL(TO_NUMBER(MAX(SUBSTR(BPLC_MNG_NO,6))+1),1),6,'0')  INTO T_BPLC_MNG_NO
+					FROM USR_UBP.A_CM_A00099 A
+					WHERE A.UKEY_GNB_SE_CD = '2'
+                     AND BPLC_MNG_NO LIKE TO_CHAR(SYSDATE, 'YYYY') || '%'
+					 AND A.UKEY_MNG_NO  <=  '99999999999'
+                   	AND ROWNUM = 1 ;
+
+			T_BSBGN_NO 		:= '00000000000';  	--사업개시번호
+    		T_BSBGN_ORDR_NO	:= 0 ;				--사업개시순서번호
+
+ 		WHEN '3'	THEN  -- 안보단 고요사업장일 경우 근복단 키를 가져와서 +1 함.
+			T_KEY_GU  	:= '05' ;
+			T_KEYMAP_GU := '06' ;
+		    T_BPLC_MNG_NO 	:= I_BPLC_MNG_NO;  	--사업장관리번호
+			T_BSBGN_NO 		:= I_BSBGN_NO;  	--사업개시번호
+			/* 사업개시 순서번호 */
+
+
+			SELECT    /*+ INDEX_DESC(A A_CM_A00099_PK) */
+            	NVL(MAX(A.BSBGN_ORDR_NO),0) + 1 INTO T_BSBGN_ORDR_NO
+               	FROM      USR_UBP.A_CM_A00099 A
+ 			WHERE A.UKEY_GNB_SE_CD = '3'
+            AND A.BPLC_MNG_NO = I_BPLC_MNG_NO			--91204174817
+			AND A.BSBGN_NO = I_BSBGN_NO              --91204731667
+            AND ROWNUM = 1   ;
+	        IF NVL(T_BSBGN_ORDR_NO,0) = 0 THEN
+	       	 	O_ERR := 0;
+   		    	O_ERRMSG  := '기존 근복단 키 미 존재';
+				ROLLBACK ;
+				RETURN ;
+			END IF;
+
+ 		WHEN '4'	THEN  -- 노동부임시사업장  은 받은 그대로 넘김
+			T_KEY_GU  	:= '07' ;
+			T_KEYMAP_GU := '08' ;
+		    T_BPLC_MNG_NO 	:= I_BPLC_MNG_NO;  	--사업장관리번호
+			T_BSBGN_NO 		:= I_BSBGN_NO;  	--사업개시번호
+    		T_BSBGN_ORDR_NO	:= I_BSBGN_ORDR_NO ;				--사업개시순서번호
+
+ 		WHEN '9'	THEN --이해관계인
+			T_KEY_GU  	:= '11' ;
+			T_KEYMAP_GU := '12' ;
+            T_BPLC_MNG_NO 	:= '00000000000';  	--사업장관리번호
+			T_BSBGN_NO 		:= '00000000000';  	--사업개시번호
+    		T_BSBGN_ORDR_NO	:= 0 ;				--사업개시순서번호
+
+ 		ELSE
+       	 	O_ERR := -1;
+        	O_ERRMSG  := 'PC_A_CM_00101 변수중 비정상(NULL) 존재';
+			ROLLBACK ;
+			RETURN ;
+
+  	END CASE;
+
+/*4. 관리번호 및 키맵번호 생성  */
+
+    O_BPLC_MNG_NO 	:= T_BPLC_MNG_NO;  	--사업장관리번호
+	O_BSBGN_NO 		:= T_BSBGN_NO;  	--사업개시번호
+	O_BSBGN_ORDR_NO	:= T_BSBGN_ORDR_NO ;				--사업개시순서번호
+   	O_UKEY_MNG_NO := T_KEY_GU || T_UKEY_MNG_NO ; --T통합사업장관리번호/이해관계인관리번호
+  	O_UKEY_MAP_MNG_NO := T_KEYMAP_GU || T_UKEY_MNG_NO; --토합사업장키맵관리번호/이해관계인키맵관리번호
+
+/* 5. A_CM_A00099 신규 등록  처리 */
+
+	INSERT INTO USR_UBP.A_CM_A00099 (
+		UKEY_GNB_SE_CD	,UKEY_MNG_NO	,UKEY_MAP_MNG_NO
+        ,BPLC_MNG_NO    ,BSBGN_NO		,BSBGN_ORDR_NO
+        ,FRST_INPUSR_ID ,FRST_INPUT_DEPT_CD	,FRST_INPUT_BRFFC_CD
+        ,FRST_INPUT_DT )
+	VALUES (
+       	I_UKEY_GNB_SE_CD  	,O_UKEY_MNG_NO 		,O_UKEY_MAP_MNG_NO
+  		,T_BPLC_MNG_NO  	,T_BSBGN_NO 		,O_BSBGN_ORDR_NO
+ 		,I_FRST_INPUSR_ID	,I_FRST_INPUT_DEPT_CD	,I_FRST_INPUT_BRFFC_CD
+	,I_FRST_INPUT_DT ) ;
+--   COMMIT ;
+	EXCEPTION WHEN OTHERS THEN
+       	 	O_ERR := -1;
+        	O_ERRMSG  := 'PC_A_CM_00101 비정상 오류 발생' || SQLERRM;
+			ROLLBACK ;
+			RETURN ;
+
+END;
+/

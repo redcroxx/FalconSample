@@ -1,0 +1,126 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00998
+
+
+
+
+
+
+
+
+
+
+
+  (
+I_BATCH_PROGRM_ID		IN      VARCHAR2,	--배치프로그램아이디
+I_BATCH_OPERT_BEGIN_DT	IN      DATE,	--배치작업시작일시
+I_BATCH_OPERT_END_DT	IN      DATE,	--배치작업종료일시
+I_BATCH_TRGET_TOT_CNT	IN      NUMBER,		--배치대상총건수
+I_NRMLT_PRSS_CO			IN      NUMBER,		--정상처리수
+I_EXCP_PRSS_CO			IN      NUMBER,		--예외처리수
+I_ERROR_PRSS_CO			IN      NUMBER,		--오류처리수
+I_RM_CN					IN      VARCHAR2,	--비고내용
+I_FRST_INPUSR_ID		IN      VARCHAR2,	--최초입력자아이디
+I_FRST_INPUT_DEPT_CD	IN      VARCHAR2,	--최초입력부서코드
+I_FRST_INPUT_BRFFC_CD	IN      VARCHAR2,	--최초입력지사코드
+I_FRST_INPUT_DT			IN      DATE,		--최초입력일시
+O_ERR					IN OUT     VARCHAR2 ,  	--에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+O_ERRMSG				IN OUT     VARCHAR2    	--에러내용
+  )
+IS
+/*******************************************************************************
+    프로그램 ID  : PC_A_CM_00998
+    프로그램 명  : 배치시 로그 내역 등록
+
+    파 라 미 터  :
+
+    	    	    	1 )I_BATCH_PROGRM_ID	    	    	배치프로그램아이디
+			2 )I_BATCH_OPERT_BEGIN_DT		배치작업시작일시
+			3 )I_BATCH_OPERT_END_DT			배치작업종료일시
+			4 )I_BATCH_TRGET_TOT_CNT		배치대상총건수
+			5 )I_NRMLT_PRSS_CO			정상처리수
+			6 )I_EXCP_PRSS_CO			예외처리수
+			7 )I_ERROR_PRSS_CO			오류처리수
+			8 )I_RM_CN				비고내용
+			9 )I_FRST_INPUSR_ID			최초입력자아이디(NULL 처리)
+			10)I_FRST_INPUT_DEPT_CD			최초입력부서코드(NULL 처리)
+			11)I_FRST_INPUT_BRFFC_CD		최초입력지사코드(NULL 처리)
+			12)I_FRST_INPUT_DT			최초입력일시
+			17)O_ERR				에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+			18)O_ERRMSG				에러내용
+
+
+    프로그램설명 : 1) 배19)치 처리 내역 등록  프로시져  -> 배치 처리후 등록   A_CM_M00101 에 내역 INSERT
+
+    <PK 규칙>
+	PK는 MAX(BATCH_PRSS_MNG_NO) + 1
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-10-06   정해원     1. 최초작성
+ ****************************************************************************** */
+
+-- 0.선언
+T_BATCH_PRSS_MNG_NO   VARCHAR2(11) := '00000000000';
+
+BEGIN
+    O_ERR       := 1;				--에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+    O_ERRMSG	:= '정상처리되었습니다.';                                         -- 리턴 메시지
+
+     /*1. 비정상 입력값체크 */
+	IF (
+			I_BATCH_PROGRM_ID	IS NULL
+ 		OR	I_BATCH_OPERT_BEGIN_DT	IS NULL
+				   	) THEN
+       	 	O_ERR := -1;
+        	O_ERRMSG  := 'A_CM_M00101_LOG 변수중 비정상(NULL) 존재';
+			ROLLBACK ;
+			RETURN ;
+	END IF;
+
+  /*2. 기초 DB 가져옴 */
+	/* 기존 데이타 + 1 증가  */
+	BEGIN
+		SELECT	/*+ INDEX_DESC(A A_CM_M00101_PK) */
+			LPAD(TO_NUMBER(A.BATCH_PRSS_MNG_NO) + 1,11,'0')  INTO  T_BATCH_PRSS_MNG_NO
+          	FROM      USR_UBP.A_CM_M00101 A
+		WHERE A.BATCH_PRSS_MNG_NO < '99999999999'
+		AND ROWNUM  = 1;
+
+        EXCEPTION WHEN NO_DATA_FOUND THEN
+      	 	T_BATCH_PRSS_MNG_NO := '00000000001';
+	END;
+
+/* 3. 로직 처리 */
+
+
+/* 4. 로그 등록  처리 */
+
+	INSERT INTO A_CM_M00101 (
+    	BATCH_PRSS_MNG_NO		,BATCH_PROGRM_ID		,BATCH_OPERT_BEGIN_DT
+        ,BATCH_OPERT_END_DT		,BATCH_TRGET_TOT_CNT	,NRMLT_PRSS_CO
+        ,EXCP_PRSS_CO        	,ERROR_PRSS_CO			,RM_CN
+        ,FRST_INPUSR_ID			,FRST_INPUT_DEPT_CD     ,FRST_INPUT_BRFFC_CD
+        ,FRST_INPUT_DT			,LAST_UPDUSR_ID         ,LAST_UPDT_DEPT_CD
+        ,LAST_UPDT_BRFFC_CD		,LAST_UPDT_DT )
+	VALUES (
+		T_BATCH_PRSS_MNG_NO	,I_BATCH_PROGRM_ID			,TO_CHAR(I_BATCH_OPERT_BEGIN_DT,'RRRRMMDDHHMMSS')
+		,TO_CHAR(I_BATCH_OPERT_END_DT,'RRRRMMDDHHMMSS')	,I_BATCH_TRGET_TOT_CNT	,I_NRMLT_PRSS_CO
+		,I_EXCP_PRSS_CO			,I_ERROR_PRSS_CO		,I_RM_CN
+		,I_FRST_INPUSR_ID		,I_FRST_INPUT_DEPT_CD	,I_FRST_INPUT_BRFFC_CD
+		,I_FRST_INPUT_DT		,I_FRST_INPUSR_ID		,I_FRST_INPUT_DEPT_CD
+		,I_FRST_INPUT_BRFFC_CD	,I_FRST_INPUT_DT	) ;
+
+
+		COMMIT;
+
+	EXCEPTION WHEN OTHERS THEN
+   	 	O_ERR := -1;
+       	O_ERRMSG  := 'A_CM_M00101 비정상 오류 발생' || SQLERRM ;
+		ROLLBACK ;
+		RETURN ;
+
+END;
+/

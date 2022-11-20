@@ -1,0 +1,1463 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00021
+
+
+
+  ( I_DEBUG IN VARCHAR2  )
+/*******************************************************************************
+    프로그램 ID  : USR_UBP.PC_A_CM_00021
+    프로그램 명  : 노동부 수신 배치
+
+    파 라 미 터  :
+    프로그램설명 : 사업장, 이해관계인 등록, 수정
+
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-10-27   정종욱     1. 최초작성
+ ****************************************************************************** */
+IS
+-- 0.선언
+	T_NO		NUMBER		 	:= 0 ;
+	T_ROWCNT	NUMBER		 	:= 0 ;
+	T_BATCH_TRGET_TOT_CNT	NUMBER		 	:= 0 ;
+	T_NRMLT_PRSS_CO			NUMBER		 	:= 0 ;
+	T_EXCP_PRSS_CO			NUMBER		 	:= 0 ;
+	T_ERROR_PRSS_CO			NUMBER		 	:= 0 ;
+	T_DATE 		DATE		:= SYSDATE ;
+	T_SDATE 	DATE		:= SYSDATE ;
+	T_EDATE 	DATE		:= SYSDATE ;
+	T_MSG 		VARCHAR2(2000) := '';
+	T_ERR_FLAG   CHAR(1) := '0';
+	T_ERR_KEY1   VARCHAR2(50) := ' ';
+	T_ERR_KEY2   VARCHAR2(50) := ' ';
+	T_ERR_KEY3   VARCHAR2(50) := ' ';
+	T_ERR_KEY4   VARCHAR2(50) := ' ';
+	T_ERR_KEY5   VARCHAR2(50) := ' ';
+	O_ERR				NUMBER		 	:= 0 ;
+	O_ERRMSG    	VARCHAR2(1000) := ' ';
+	T_CRUD_GU   CHAR(1) := 'C';
+	T_PROC_ID   VARCHAR2(10) := '21';
+	T_PROC_NM   VARCHAR2(50) := 'PC_A_CM_00021';
+	T_TABLE_NM   VARCHAR2(50) := 'P_AA_R_IFPR18';
+
+	T_BATCH_PRSS_MNG_NO VARCHAR2(11) := '';
+
+    T_GUBUN NUMBER  := 0;
+
+    T_TEL_TOT VARCHAR2(20) := '';
+    T_TEL_NUM1 VARCHAR2(10) := '';
+    T_TEL_NUM2 VARCHAR2(10) := '';
+    T_TEL_NUM3 VARCHAR2(20) := '';
+
+
+    T_FAX_TOT VARCHAR2(20) := '';
+    T_FAX_NUM1 VARCHAR2(10) := '';
+    T_FAX_NUM2 VARCHAR2(10) := '';
+    T_FAX_NUM3 VARCHAR2(20) := '';
+
+    T_UBPCR_YN  VARCHAR2(1) := '';   -- 공동대표여부
+
+    T_O_BPLC_MNG_NO   VARCHAR2(20) := '';   -- 사업장관리번호
+    T_O_BSBGN_NO     VARCHAR2(20) := '';  -- 사업개시번호
+    T_O_BSBGN_ORDR_NO NUMBER := 0;  -- 사업개시순서번호
+    T_O_UKEY_MNG_NO   VARCHAR2(20) := '';  -- 사업장관리번호
+    T_O_UKEY_MAP_MNG_NO   VARCHAR2(20) := '';  -- 사업장키맵관리번호
+    T_O_ERR   VARCHAR2(20) := '';  --에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+    T_O_ERRMSG   VARCHAR2(20) := '';  --에러내용
+
+    I_O_BPLC_MNG_NO   VARCHAR2(20) := '';   -- 이해관계인 키맵관리번호
+    I_O_BSBGN_NO     VARCHAR2(20) := '';  -- 사업개시번호
+    I_O_BSBGN_ORDR_NO NUMBER := 0;  -- 사업개시순서번호
+    I_O_UKEY_MNG_NO   VARCHAR2(20) := '';  -- 이해관계인 관리번호
+    I_O_UKEY_MAP_MNG_NO   VARCHAR2(20) := '';  -- 이해관계인 키맵관리번호
+    I_O_ERR   VARCHAR2(20) := '';  --에러값	리턴 값분 (1: 성공 0:NO DATA -1 : 실패 )
+    I_O_ERRMSG   VARCHAR2(20) := '';  --에러내용
+
+    T_SAEOP_NO VARCHAR2(20) := '';  -- 사업장관리번호
+    T_MAIN_GWANRI_NO VARCHAR2(20) := '';  -- 주된사업장관리번호
+
+    T_UBP_HCADGC_SE_CD   VARCHAR2(1) := '';   -- 본/지사 구분코드
+
+    T_SJ_EOPJONG_CD  VARCHAR2(1) := '';  -- 산재업종구분코드
+    T_UBP_SE_CD VARCHAR2(1) := '';
+
+    T_UBP_UPDATE_DT  VARCHAR2(50) := TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS');
+
+
+    T_SAEOPJU_REG_NO VARCHAR2(20) := ''; -- 이해관계인 주민번호
+
+    T_SAEOPJU_NUM1 VARCHAR2(20) := ''; -- 이해관계인 주민번호 앞자리
+    T_SAEOPJU_NUM2 VARCHAR2(20) := ''; -- 이해관계인 주민번호 뒷자리
+
+    T_SAEOPJU_SEX VARCHAR2(20) := ''; -- 이해관계인 남녀구분
+    T_UDSRLH_NTFRR_SE_CD VARCHAR2(20) := ''; -- 내외국인 구분코드
+
+
+    -- Insert 변수
+	I_KOSHA_MNG_BRFFC_CD   VARCHAR2(20) := '';   -- 안전보건공단 관리지사 코드
+    I_EMLBR_MNG_BRFFC_CD   VARCHAR2(20) := '';   -- 고용노동부 관리지사 코드
+    I_UBP_HCADGC_SE_CD    VARCHAR2(1) := '';   -- 본지사 구분코드(1:본사,2:지사)
+	I_SAEOPJU_REG_NO   VARCHAR2(20) := '';   -- 주민등록번호
+    I_SAEOPJU_NUM1 VARCHAR2(20) := ''; -- 이해관계인 주민번호 앞자리
+    I_SAEOPJU_NUM2 VARCHAR2(20) := ''; -- 이해관계인 주민번호 뒷자리
+    I_BIRTHDAY VARCHAR2(20) := ''; -- 생년월일
+    I_SAEOPJU_SEX VARCHAR2(20) := ''; -- 이해관계인 남녀구분
+    I_UDSRLH_NTFRR_SE_CD VARCHAR2(20) := ''; -- 내/외국인 구분코드
+    I_GUBUN_ZIP_CD VARCHAR2(20) := ''; -- 관리지사코드 변수 입력값
+
+	-- update 변수
+	U_KOSHA_MNG_BRFFC_CD   VARCHAR2(20) := '';   -- 안전보건공단 관리지사 코드
+    U_EMLBR_MNG_BRFFC_CD   VARCHAR2(20) := '';   -- 고용노동부 관리지사 코드
+    U_UBP_HCADGC_SE_CD    VARCHAR2(1) := '';   -- 본지사 구분코드(1:본사,2:지사)
+	U_SAEOPJU_REG_NO   VARCHAR2(20) := '';   -- 주민등록번호
+    U_SAEOPJU_NUM1 VARCHAR2(20) := ''; -- 이해관계인 주민번호 앞자리
+    U_SAEOPJU_NUM2 VARCHAR2(20) := ''; -- 이해관계인 주민번호 뒷자리
+    U_BIRTHDAY VARCHAR2(20) := ''; -- 생년월일
+    U_SAEOPJU_SEX VARCHAR2(20) := ''; -- 이해관계인 남녀구분
+    U_UDSRLH_NTFRR_SE_CD VARCHAR2(20) := ''; -- 내/외국인 구분코드
+
+    U_UBP_MRG_MNG_NO  VARCHAR2(20) := '';
+    U_UBP_SE_CD  VARCHAR2(20) := '';
+    U_UBP_NM  VARCHAR2(20) := '';
+
+	T_END_DT VARCHAR2(15) := '';
+	T_BEGIN_DT VARCHAR2(15) := '';
+
+	T_UBP_AREA_SE_CD VARCHAR2(6) := '';
+    T_UBP_RDNMADR_CD VARCHAR2(11) := '';
+
+CURSOR C1 IS
+	SELECT * FROM  USR_ESB.P_AA_R_IFPR18 WHERE STATUS = 'N';
+
+BEGIN
+	T_MSG := T_PROC_NM ||' START! ';
+
+		/* 배치처리관리번호 채번 */
+		SELECT /*+ INDEX_DESC(A A_CM_M00101_PK) */
+   		     	LPAD(TO_NUMBER(MAX(BATCH_PRSS_MNG_NO)) +1 ,11,'0')  INTO 	T_BATCH_PRSS_MNG_NO
+			FROM USR_UBP.A_CM_M00101 A
+		WHERE A.BATCH_PRSS_MNG_NO <= '99999999999'
+		AND ROWNUM = 1 ;
+
+	IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+    FOR AA1 IN  C1 LOOP
+   		--T_CRUD_GU := AA1.ESBIF_ACTION ;   --CRUD 구분 코드
+
+		T_ROWCNT  := T_ROWCNT + 1;
+		T_ERR_FLAG := '0';
+		T_ROWCNT  := T_ROWCNT + 1;
+		T_ERR_FLAG := '0';
+
+        IF AA1.SAEOPJU_NM IS NULL THEN  -- 통합 대표자 명
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  ' 통합대표자 명 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.SAEOPJANG_BYEONGHAENG_ADDR IS NULL THEN  -- 통합사업장병행상세주소
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '통합사업장병행상세주소 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.SAEOPJANG_NM IS NULL THEN  -- 통합사업장명
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '통합사업장명 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.SAEOPJANG_SEARCH_NM IS NULL THEN  -- 통합사업장검색어명
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '통합사업장검색어명 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+
+        IF AA1.SAEOP_NO IS NULL THEN  -- 통합사업장관리번호
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '통합사업장관리번호 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.SJ_EOPJONG_CD IS NULL THEN  -- 통합사업장산재업종코드
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '통합사업장산재업종코드 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.SAEOPJANG_TEL IS NULL THEN  -- 통합사업장앞자리전화번호
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' || '통합사업장산재업종코드 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.GY_EOPJONG_CD IS NULL THEN  -- 통합사업장고용업종코드
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' || '통합사업장고용업종코드 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.SAEOPJANG_ADDR2 IS NULL THEN  -- 통합사업장상세주소
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' || '통합사업장상세주소 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF AA1.SAEOP_REG_NO IS NULL THEN  -- 통합사업장사업자등록번호
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '통합사업장사업자등록번호 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+
+        IF AA1.SAEOPJANG_TEL IS NULL THEN  -- 통합사업장지역전화번호
+		 	-- NOT NULL 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  '통합사업장지역전화번호 데이터 없음'  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+
+		IF T_ERR_FLAG = '1' THEN			--오류 발생시 처리
+        	T_ERR_KEY1 := 'GWANRI_NO'  ;
+        	T_ERR_KEY2 := 'SAEOPJU_SEQ'  ;
+        	T_ERR_KEY3 := ''  ;
+        	T_ERR_KEY4 := ''  ;
+        	T_ERR_KEY5 := ''  ;
+
+
+	        USR_UBP.PC_A_CM_00999(T_BATCH_PRSS_MNG_NO,TO_CHAR(SYSDATE,'RRRRMMDDHHMMSS') ,  T_TABLE_NM
+            						,T_ERR_KEY1,T_ERR_KEY2,T_ERR_KEY3		,T_ERR_KEY4,T_ERR_KEY5,T_MSG
+                                    ,NULL,NULL,NULL,SYSDATE
+                                    ,NULL,NULL,NULL,SYSDATE
+                                        ,O_ERR,O_ERRMSG) ;
+
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERROR_PRSS_CO	:= T_ERROR_PRSS_CO	 + 1;
+		ELSE    --정상일 경우
+			T_NRMLT_PRSS_CO := 	T_NRMLT_PRSS_CO + 1 ;
+			SELECT COUNT(*)  INTO T_NO  FROM USR_UBP.A_CM_A00101 A  WHERE A.BPLC_MNG_NO = AA1.SAEOP_NO;
+            T_NO := NVL(T_NO,0) ;
+            T_UBPCR_YN := 'N'; -- 공동대표여부
+            IF T_NO = 0 OR T_NO IS NULL THEN
+           		USR_UBP.PC_A_CM_00101('4',AA1.SAEOP_NO,AA1.SAEOPGAESI_NO,AA1.SAEOPGAESI_ORD_NO,'','','',SYSDATE,T_O_BPLC_MNG_NO,T_O_BSBGN_NO,T_O_BSBGN_ORDR_NO,T_O_UKEY_MNG_NO,T_O_UKEY_MAP_MNG_NO,T_O_ERR,T_O_ERRMSG);
+            	USR_UBP.PC_A_CM_00101('9',AA1.SAEOP_NO,AA1.SAEOPGAESI_NO,AA1.SAEOPGAESI_ORD_NO,'','','',SYSDATE,I_O_BPLC_MNG_NO,I_O_BSBGN_NO,I_O_BSBGN_ORDR_NO,I_O_UKEY_MNG_NO,I_O_UKEY_MAP_MNG_NO,I_O_ERR,I_O_ERRMSG);
+
+			  T_TEL_TOT := AA1.SAEOPJANG_TEL;
+
+            -- INSERT 변수 셋팅 시작
+              IF T_TEL_TOT IS NULL OR T_TEL_TOT = '' THEN
+                  T_TEL_NUM1 := '';
+                  T_TEL_NUM2 := '';
+                  T_TEL_NUM3 := '';
+              ELSE
+                  SELECT REGEXP_SUBSTR(T_TEL_TOT, '[^-]*')  INTO T_TEL_NUM1 FROM DUAL;   -- 첫번째 자리
+                  SELECT REGEXP_SUBSTR(REPLACE(T_TEL_TOT, REGEXP_SUBSTR(T_TEL_TOT, '[^-]*')||'-',''), '[^-]*') INTO T_TEL_NUM2 FROM DUAL;  -- 두번? 자리
+                  SELECT REGEXP_SUBSTR(T_TEL_TOT, '[^-]*$') INTO T_TEL_NUM3 FROM DUAL;	  -- 마지막 자리
+              END IF;
+
+              T_FAX_TOT := AA1.SAEOPJANG_FAX;
+
+              IF T_FAX_TOT IS NULL OR T_FAX_TOT = '' THEN
+                  T_FAX_NUM1 := '';
+                  T_FAX_NUM2 := '';
+                  T_FAX_NUM3 := '';
+              ELSE
+                  SELECT REGEXP_SUBSTR(T_FAX_TOT, '[^-]*') INTO T_FAX_NUM1 FROM DUAL;   -- 첫번째 자리
+                  SELECT REGEXP_SUBSTR(REPLACE(T_FAX_TOT, REGEXP_SUBSTR(T_FAX_TOT, '[^-]*')||'-',''), '[^-]*') INTO T_FAX_NUM2 FROM DUAL;  -- 두번? 자리
+                  SELECT REGEXP_SUBSTR(T_FAX_TOT, '[^-]*$') INTO  T_FAX_NUM3 FROM DUAL;	  -- 마지막 자리
+              END IF;
+              -- 관리지사 설정
+			  --그룹카운트수 1자리 (보통은 1 예외는 2) +  노동부 관리지사 4자리 + 공단 관리지사 2자리
+			  -- substr(return  ,2,6) = '000000' 일때 예외 처리
+              -- I_KOSHA_MNG_BRFFC_CD := ''; -- 안전보건공단 관리지사 코드
+              -- I_EMLBR_MNG_BRFFC_CD := '';  -- 고용노동부 관리지사 코드
+              I_GUBUN_ZIP_CD := USR_UBP.FN_A_CM_00100(TRIM(AA1.SAEOPJANG_ZIP_CD), TRIM(AA1.SAEOPJANG_ADDR_REG_NO), TRIM(AA1.SAEOPJANG_ADDR1), TRIM(AA1.SAEOPJANG_ADDR2));
+              I_GUBUN_ZIP_CD := SUBSTR(I_GUBUN_ZIP_CD,2,6);
+
+              IF I_GUBUN_ZIP_CD = '000000' THEN
+                    -- 우편번호 예외처리 INSERT
+                    INSERT INTO A_CM_E00101_LOG
+                            (EXCP_PRSS_MNG_NO
+                            ,EXCP_PRSS_OCCRRNC_DY
+                            ,UBP_ZIP
+                            ,EMLBR_MNG_BRFFC_CD
+                            ,KOSHA_MNG_BRFFC_CD
+                            ) VALUES (
+                              (SELECT LPAD((SELECT /*+ INDEX_DESC(A A_CM_E00101_LOG_PK) */
+                              NVL( MAX(EXCP_PRSS_MNG_NO),0)  FROM USR_UBP.A_CM_E00101_LOG
+                              WHERE EXCP_PRSS_MNG_NO < '99999999999'
+                              ) + 1,9,'0') FROM DUAL)
+                              , TO_CHAR(SYSDATE,'RRRRMMDD')
+                              , AA1.SAEOPJANG_ZIP_CD
+                              ,'00'
+                              ,'0000'
+                            );
+                    COMMIT;
+               END IF;
+               I_KOSHA_MNG_BRFFC_CD := SUBSTR(I_GUBUN_ZIP_CD,2,4);  -- 안전보건공단 관리지사 코드
+               I_EMLBR_MNG_BRFFC_CD := SUBSTR(I_GUBUN_ZIP_CD,5,2);  -- 고용노동부 관리지사 코드
+
+               -- 본/지사 설정
+		       -- 사업장관리번호(AA1.SAEOP_NO)와 주된사업장 관리번호(AA1.MAIN_GWANRI_NO)가 같으면 본사 다르면 지사
+        	   IF AA1.SAEOP_NO = AA1.MAIN_GWANRI_NO THEN T_UBP_HCADGC_SE_CD := '1';
+               ELSE T_UBP_HCADGC_SE_CD := '2';
+               END IF;
+
+               -- 산재업종구분코드(AA1.SJ_EOPJONG_CD) 값이 2,4,8 이면 공사장 아니면 사업장
+               IF AA1.SJ_EOPJONG_CD = '2' OR  AA1.SJ_EOPJONG_CD = '4' OR  AA1.SJ_EOPJONG_CD = '8' THEN T_UBP_SE_CD := '1';
+               ELSE T_UBP_SE_CD := '2'; END IF;
+
+                -- 이해관계인 주민번호  분할 셋팅
+			    -- 주민번호 셋팅
+                -- 남
+                -- I_SAEOPJU_REG_NO
+                I_SAEOPJU_REG_NO := NVL(AA1.SAEOPJU_REG_NO,'');  -- 주민번호 셋팅
+				IF I_SAEOPJU_REG_NO <> '' THEN
+                   I_SAEOPJU_REG_NO := REPLACE(TRIM(I_SAEOPJU_REG_NO),'-','');
+                   I_SAEOPJU_NUM1  := SUBSTR(I_SAEOPJU_REG_NO,1,6);  -- 주민번호 앞자리
+                   I_SAEOPJU_NUM2  := SUBSTR(I_SAEOPJU_REG_NO,7,7);  -- 주민번호 뒷자리
+                  --I_SAEOPJU_SEX   := SUBSTR(I_SAEOPJU_NUM2,1,1);
+                  -- 생년월일 셋팅
+                  IF SUBSTR(I_SAEOPJU_SEX,1,1) = '1' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '2' THEN I_BIRTHDAY := '19' || I_SAEOPJU_NUM1; T_UDSRLH_NTFRR_SE_CD := '1';
+                  ELSIF SUBSTR(I_SAEOPJU_SEX,1,1) = '3' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '4' THEN I_BIRTHDAY := '20' || I_SAEOPJU_NUM1; T_UDSRLH_NTFRR_SE_CD := '1';
+                  ELSIF SUBSTR(I_SAEOPJU_SEX,1,1) = '5' THEN T_UDSRLH_NTFRR_SE_CD := '2'; END IF;
+                  -- 남녀구분 셋팅
+                  IF SUBSTR(I_SAEOPJU_SEX,1,1) = '1' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '3' THEN I_SAEOPJU_SEX := 'M';-- 남자
+                  ELSIF SUBSTR(I_SAEOPJU_SEX,1,1) = '2' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '4' THEN I_SAEOPJU_SEX := 'F'; END IF;-- 여자
+                END IF;
+
+    			SELECT TO_CHAR(SYSDATE - 1/(24*60*60),'YYYYMMDDHH24MISS') INTO T_END_DT FROM DUAL;	/*종료일시*/
+		    	SELECT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') INTO T_BEGIN_DT FROM DUAL;				/*시작일시*/
+
+                --  A_CM_E00101 테이블의 ROAD_NM_CD의  UBP_AREA_SE_CD	 앞 5자리 UBP_RDNMADR_CD 나머지 10자리
+
+                IF LENGTH(AA1.SAEOPJANG_ZIP_CD) = 5 THEN -- 신우편번호
+                    SELECT TRIM(ROAD_NM_CD) INTO T_UBP_RDNMADR_CD FROM  A_CM_E00101 WHERE ZIP = TRIM(AA1.SAEOPJANG_ZIP_CD);
+          			T_UBP_AREA_SE_CD := SUBSTR(T_UBP_RDNMADR_CD,1,5) ;
+                ELSIF LENGTH(AA1.SAEOPJANG_ZIP_CD) = 6 THEN  -- 구우편번호
+                    SELECT TRIM(ROAD_NM_CD) INTO T_UBP_RDNMADR_CD FROM  A_CM_E00101 WHERE OLD_ZIP = TRIM(AA1.SAEOPJANG_ZIP_CD);
+          			T_UBP_AREA_SE_CD := SUBSTR(T_UBP_RDNMADR_CD,1,5) ;
+				END IF;
+
+
+            -- INSERT 변수셋팅  끝
+
+            -- INSERT 테이블 입력 시작
+            --
+			-- USR_UBP.A_CM_A00100 시작
+            -- USR_UBP.A_CM_A00100 끝
+            -- INSERT 테이블 입력 끝
+			/*********************************************
+            입력변수
+            T_UBPCR_YN -- 공동대표여부
+            T_TEL_NUM1 -- 전화번호(지역전화번호)
+            T_TEL_NUM2 -- 전화번호(앞자리)
+            T_TEL_NUM3 -- 전화번호(뒷자리)
+            T_FAX_NUM1 -- FAX번호(지역전화번호)
+            T_FAX_NUM2 -- FAX번호(앞자리)
+            T_FAX_NUM3 -- FAX번호(뒷자리)
+            I_KOSHA_MNG_BRFFC_CD -- 안전보건공단 관리지사 코드
+            I_EMLBR_MNG_BRFFC_CD   -- 고용노동부 관리지사 코드
+            T_UBP_HCADGC_SE_CD -- 본/지사구분
+            T_UBP_SE_CD -- 산재업종구분코드
+            I_BIRTHDAY  -- 생년월일
+            T_UDSRLH_NTFRR_SE_CD -- 내외국인구분코드
+            T_UBP_AREA_SE_CD -- 통합사업장지역구분코드
+            T_UBP_RDNMADR_CD -- 통합사업장도로명주소코드
+    		T_END_DT -- 종료일시
+            T_BEGIN_DT -- 시작일시
+            *********************************************/
+            -- A_CM_A00100 입력 시작
+			INSERT INTO A_CM_A00100 (
+                UBP_MNG_NO	/*	통합사업장관리번호	*/
+              ,	UBP_NM	/*	통합사업장명	*/
+              ,	UBP_SRCHWRD_NM	/*	통합사업장검색어명	*/
+              ,	UDSRLH_KMAP_MNG_NO	/*	이해관계인키맵관리번호	*/
+              ,	UBP_RPR_NM	/*	통합사업장대표자명	*/
+              ,	UBP_BIZRNO	/*	통합사업장사업자등록번호	*/
+              ,	UBPCR_YN	/*	통합사업장공동대표여부	*/
+              ,	UBP_INDUSAC_INDUTY_CD 	/*	통합사업장산재업종코드	*/
+              ,	UBP_EMPLYM_INDUTY_CD	/*	통합사업장고용업종코드	*/
+              ,	UBP_ZIP	/*	통합사업장우편번호	*/
+              ,	UBP_BASS_ADRES	/*	통합사업장기본주소	*/
+              ,	UBP_DETAIL_ADRES	/*	통합사업장상세주소	*/
+              ,	UBP_PRL_DETAIL_ADRES	/*	통합사업장병행상세주소	*/
+              ,	UBP_AREA_TELNO	/*	통합사업장지역전화번호	*/
+              ,	UBP_FRNT_TELNO 	/*	통합사업장앞자리전화번호	*/
+              ,	UBP_SUFX_TELNO	/*	통합사업장뒷자리전화번호	*/
+              ,	EMLBR_MNG_BRFFC_CD	/*	고용노동부관리지사코드	*/
+              ,	KOSHA_MNG_BRFFC_CD	/*	안전보건공단관리지사코드	*/
+              ,	UBP_SE_CD	/*	통합사업장구분코드	*/
+              ,	UBP_RNDM_SE_CD	/*	통합사업장임의구분코드	*/
+              ,	UBP_LAST_ST_SE_CD	/*	통합사업장최종상태구분코드	*/
+              ,	UBP_HCADGC_SE_CD	/*	통합사업장본지사구분코드	*/
+              ,	UBP_AREA_FXNUM	/*	통합사업장지역팩스번호	*/
+              ,	UBP_FRNT_FXNUM	/*	통합사업장앞자리팩스번호	*/
+              ,	UBP_SUFX_FXNUM	/*	통합사업장뒷자리팩스번호	*/
+              ,	KWS_MNG_BRFFC_CD	/*	근복단관리지사코드	*/
+              ,	KWS_PROCESS_BRFFC_CD	/*	근복단처리지사코드	*/
+              ,	UBP_TOT_ORDTM_NMPR_CO	/*	통합사업장총상시인원수	*/
+              ,	UBP_AREA_SE_CD	/*	통합사업장지역구분코드	*/
+              ,	UBP_RDNMADR_CD	/*	통합사업장도로명주소코드	*/
+              ,	CPR_REGIST_NO	/*	법인등록번호	*/
+              ,	CPR_SE_CD	/*	법인구분코드	*/
+              ,	CPR_CL_SE_CD	/*	법인분류구분코드	*/
+              ,	CPR_KND_SE_CD	/*	법인종류구분코드	*/
+              ,	TOT_CNTRWK_AMOUNT	/*	총공사금액	*/
+              ,	CNTRWK_SE_CD	/*	공사구분코드	*/
+              ,	YEAR_NMPR_CO	/*	연인원수	*/
+              ,	ORDER_TOT_CNTRWK_AMOUNT	/*	발주총공사금액	*/
+              ,	CNTRCT_AMOUNT	/*	계약금액	*/
+              ,	CNTRCT_DY	/*	계약일자	*/
+              ,	INDUSAC_BSNS_SE_CD	/*	산재사업구분코드	*/
+              ,	EMPLYM_ORDTM_NMPR_CO	/*	고용상시인원수	*/
+              , UBP_FRST_FORMATN_DY /*	통합사업장최초성립일자	*/
+              , UBP_LAST_EXTSH_DY /*	통합사업장최종소멸일자	*/
+            ) VALUES (
+                T_O_BPLC_MNG_NO	/*	통합사업장관리번호	*/
+              ,	TRIM(AA1.SAEOPJANG_NM)	/*	통합사업장명	*/
+              ,	TRIM(AA1.SAEOPJANG_SEARCH_NM)	/*	통합사업장검색어명	*/
+              ,	TRIM(I_O_UKEY_MAP_MNG_NO)	/*	이해관계인키맵관리번호	*/
+              ,	TRIM(AA1.SAEOPJU_NM)	/*	통합사업장대표자명	*/
+              ,	'0000000000'	/*	통합사업장사업자등록번호	*/
+              ,	TRIM(T_UBPCR_YN)	/*	통합사업장공동대표여부	*/
+              ,	AA1.SJ_EOPJONG_CD	/*	통합사업장산재업종코드	*/
+              ,	AA1.GY_EOPJONG_CD	/*	통합사업장고용업종코드	*/
+              ,	TRIM(AA1.SAEOPJANG_ZIP_CD)	/*	통합사업장우편번호	*/
+              ,	TRIM(AA1.SAEOPJANG_ADDR1)	/*	통합사업장기본주소	*/
+              ,	TRIM(AA1.SAEOPJANG_ADDR2)	/*	통합사업장상세주소	*/
+              , TRIM(AA1.SAEOPJANG_BYEONGHAENG_ADDR)	/*	통합사업장병행상세주소	*/
+              ,	T_TEL_NUM1	/*	통합사업장지역전화번호	*/
+              ,	T_TEL_NUM2	/*	통합사업장앞자리전화번호	*/
+              ,	T_TEL_NUM3	/*	통합사업장뒷자리전화번호	*/
+              ,	I_EMLBR_MNG_BRFFC_CD	/*	고용노동부관리지사코드	*/
+              ,	I_KOSHA_MNG_BRFFC_CD	/*	안전보건공단관리지사코드	*/
+              ,	AA1.SAEOP_GONGSA_GB	/*	통합사업장구분코드	*/
+              ,	AA1.IMSI_GB	/*	통합사업장임의구분코드	*/
+              ,	''	/*	통합사업장최종상태구분코드	*/
+              ,	T_UBP_HCADGC_SE_CD	/*	통합사업장본지사구분코드	*/
+              ,	T_FAX_NUM1	/*	통합사업장지역팩스번호	*/
+              ,	T_FAX_NUM2	/*	통합사업장앞자리팩스번호	*/
+              ,	T_FAX_NUM3	/*	통합사업장뒷자리팩스번호	*/
+              ,	''	/*	근복단관리지사코드	*/
+              ,	''	/*	근복단처리지사코드	*/
+              ,	AA1.TOT_GONGSA_AMT	/*	통합사업장총상시인원수	*/
+              ,	T_UBP_AREA_SE_CD	/*	통합사업장지역구분코드	*/
+              ,	T_UBP_RDNMADR_CD	/*	통합사업장도로명주소코드	*/
+              ,	AA1.BEOPIN_REG_NO	/*	법인등록번호	*/
+              ,	''	/*	법인구분코드	*/
+              ,	''	/*	법인분류구분코드	*/
+              ,	''	/*	법인종류구분코드	*/
+              ,	AA1.TOT_GONGSA_AMT	/*	총공사금액	*/
+              ,	''	/*	공사구분코드	*/
+              ,	''	/*	연인원수	*/
+              ,	''	/*	발주총공사금액	*/
+              ,	''	/*	계약금액	*/
+              ,	''	/*	계약일자	*/
+              ,	'1'	/*	산재사업구분코드	*/
+              ,	AA1.TOT_INWON_CNT	/*	고용상시인원수	*/
+              , AA1.SAEOP_BEGIN_DY  /*	통합사업장최초성립일자	*/
+              , AA1.SAEOP_END_DY  /*	통합사업장최종소멸일자	*/
+            );
+            -- A_CM_A00100 입력 끝
+			INSERT INTO A_CM_A00101(
+                UBP_BRL_KMAP_MNG_NO			/*	통합사업장사업관계키맵관리번호	*/
+              ,	UBP_MRG_SE_CD			/*	통합사업장병합구분코드	*/
+              ,	UBP_MRG_MNG_NO			/*	통합사업장병합관리번호	*/
+              ,	BPLC_MNG_NO			/*	사업장관리번호	*/
+              ,	BSBGN_NO			/*	사업개시번호	*/
+              ,	UBP_MRG_ODR			/*	통합사업장병합차수	*/
+              ,	UBP_MRG_BEGIN_DT			/*	통합사업장병합시작일시	*/
+              ,	UBP_MRG_END_DT			/*	통합사업장병합종료일시	*/
+              ,	UBP_MRG_MAIN_BPLC_MNG_NO			/*	통합사업장병합주된사업장관리번호	*/
+              ,	BSBGN_ORDR_NO			/*	사업개시순서번호	*/
+              ,	TRNSMIS_TRGET_SE_CD			/*	전송대상구분코드	*/
+              ,	TRNSMIS_COMPT_SE_CD			/*	전송완료구분코드	*/
+              ,	FEINSR_BPLC_MNG_NO			/*	4대보험사업장관리번호	*/
+              ,	FEINSR_BSBGN_NO			/*	4대보험사업개시번호	*/
+              ,	MAIN_BPLC_MNG_NO			/*	주된사업장관리번호	*/
+              ,	MAIN_BSBGN_NO			/*	주된사업개시번호	*/
+              ,	ORNR_BPLC_MNG_NO			/*	원수급사업장관리번호	*/
+              ,	ORNR_SRT_NO			/*	원수급개시번호	*/
+              ,	OLD_BPLC_MNG_NO			/*	구사업장관리번호	*/
+              ,	OLD_BSBGN_NO			/*	구사업개시번호	*/
+              ,	NLEDGER_NO			/*	새원부번호	*/
+              ,	NLEDGER_SRT_NO			/*	새원부개시번호	*/
+              ,	KWS_FRST_INPUT_DT			/*	근복단최초입력일시	*/
+              ,	KWS_LAST_CHANGE_DT			/*	근복단최종변경일시	*/
+              ,	FRST_INPUSR_ID			/*	최초입력자아이디	*/
+              ,	FRST_INPUT_DEPT_CD			/*	최초입력부서코드	*/
+              ,	FRST_INPUT_BRFFC_CD			/*	최초입력지사코드	*/
+              ,	FRST_INPUT_DT			/*	최초입력일시	*/
+              ,	LAST_UPDUSR_ID			/*	최종수정자아이디	*/
+              ,	LAST_UPDT_DEPT_CD			/*	최종수정부서코드	*/
+              ,	LAST_UPDT_BRFFC_CD			/*	최종수정지사코드	*/
+              ,	LAST_UPDT_DT			/*	최종수정일시	*/
+            ) VALUES (
+                T_O_UKEY_MAP_MNG_NO			/*	통합사업장사업관계키맵관리번호	*/
+              ,	'0'			/*	통합사업장병합구분코드	*/
+              ,	T_O_UKEY_MNG_NO 			/*	통합사업장병합관리번호	*/
+              ,	DECODE(AA1.SAEOP_NO,'',T_O_BPLC_MNG_NO,AA1.SAEOP_NO)			/*	사업장관리번호	*/
+              ,	AA1.SAEOPGAESI_NO	/*	사업개시번호	*/
+              ,	''			/*	통합사업장병합차수	*/
+              ,	''			/*	통합사업장병합시작일시	*/
+              ,	''			/*	통합사업장병합종료일시	*/
+              ,	AA1.MAIN_GWANRI_NO			/*	통합사업장병합주된사업장관리번호	*/
+              ,	AA1.MAIN_GAESI_NO			/*	사업개시순서번호	*/
+              ,	'2'			/*	전송대상구분코드	*/
+              ,	'0'			/*	전송완료구분코드	*/
+              ,	''			/*	4대보험사업장관리번호	*/
+              ,	''			/*	4대보험사업개시번호	*/
+              ,	AA1.MAIN_GWANRI_NO			/*	주된사업장관리번호	*/
+              ,	AA1.MAIN_GAESI_NO			/*	주된사업개시번호	*/
+              ,	''			/*	원수급사업장관리번호	*/
+              ,	''			/*	원수급개시번호	*/
+              ,	''			/*	구사업장관리번호	*/
+              ,	''			/*	구사업개시번호	*/
+              ,	''			/*	새원부번호	*/
+              ,	''			/*	새원부개시번호	*/
+              ,	''			/*	근복단최초입력일시	*/
+              ,	''			/*	근복단최종변경일시	*/
+              ,	''			/*	최초입력자아이디	*/
+              ,	''			/*	최초입력부서코드	*/
+              ,	''			/*	최초입력지사코드	*/
+              ,	T_BEGIN_DT			/*	최초입력일시	*/
+              ,	''			/*	최종수정자아이디	*/
+              ,	''			/*	최종수정부서코드	*/
+              ,	''			/*	최종수정지사코드	*/
+              ,	T_END_DT			/*	최종수정일시	*/
+            );
+            -- A_CM_A00100 입력 끝
+
+
+			-- A_CM_A00100_HIS 입력 끝
+			INSERT INTO A_CM_A00101_HIS(
+              	UBP_BRL_KMAP_MNG_NO		/*	통합사업장사업관계키맵관리번호	*/
+              ,	HIST_BEGIN_DT		/*	이력시작일시	*/
+              ,	HIST_END_DT		/*	이력종료일시	*/
+              ,	UBP_MRG_SE_CD		/*	통합사업장병합구분코드	*/
+              ,	UBP_MRG_MNG_NO		/*	통합사업장병합관리번호	*/
+              ,	BPLC_MNG_NO		/*	사업장관리번호	*/
+              ,	BSBGN_NO		/*	사업개시번호	*/
+              ,	UBP_MNG_NO		/*	통합사업장관리번호	*/
+              ,	UBP_NM		/*	통합사업장명	*/
+              ,	UBP_SRCHWRD_NM		/*	통합사업장검색어명	*/
+              ,	UDSRLH_KMAP_MNG_NO		/*	이해관계인키맵관리번호	*/
+              ,	UBP_RPR_NM		/*	통합사업장대표자명	*/
+              ,	UBP_BIZRNO		/*	통합사업장사업자등록번호	*/
+              ,	UBPCR_YN		/*	통합사업장공동대표여부	*/
+              ,	UBP_INDUSAC_INDUTY_CD		/*	통합사업장산재업종코드	*/
+              ,	UBP_EMPLYM_INDUTY_CD		/*	통합사업장고용업종코드	*/
+              ,	UBP_ZIP		/*	통합사업장우편번호	*/
+              ,	UBP_BASS_ADRES		/*	통합사업장기본주소	*/
+              ,	UBP_DETAIL_ADRES		/*	통합사업장상세주소	*/
+              ,	UBP_PRL_DETAIL_ADRES		/*	통합사업장병행상세주소	*/
+              ,	UBP_AREA_TELNO		/*	통합사업장지역전화번호	*/
+              ,	UBP_FRNT_TELNO		/*	통합사업장앞자리전화번호	*/
+              ,	UBP_SUFX_TELNO		/*	통합사업장뒷자리전화번호	*/
+              ,	EMLBR_MNG_BRFFC_CD		/*	고용노동부관리지사코드	*/
+              ,	KOSHA_MNG_BRFFC_CD		/*	안전보건공단관리지사코드	*/
+              ,	UBP_MRG_ODR		/*	통합사업장병합차수	*/
+              ,	UBP_MRG_BEGIN_DT		/*	통합사업장병합시작일시	*/
+              ,	UBP_MRG_END_DT		/*	통합사업장병합종료일시	*/
+              ,	UBP_MRG_MAIN_BPLC_MNG_NO		/*	통합사업장병합주된사업장관리번호	*/
+              ,	BSBGN_ORDR_NO		/*	사업개시순서번호	*/
+              ,	TRNSMIS_TRGET_SE_CD		/*	전송대상구분코드	*/
+              ,	TRNSMIS_COMPT_SE_CD		/*	전송완료구분코드	*/
+              ,	FEINSR_BPLC_MNG_NO		/*	4대보험사업장관리번호	*/
+              ,	FEINSR_BSBGN_NO		/*	4대보험사업개시번호	*/
+              ,	MAIN_BPLC_MNG_NO		/*	주된사업장관리번호	*/
+              ,	MAIN_BSBGN_NO		/*	주된사업개시번호	*/
+              ,	ORNR_BPLC_MNG_NO		/*	원수급사업장관리번호	*/
+              ,	ORNR_SRT_NO		/*	원수급개시번호	*/
+              ,	OLD_BPLC_MNG_NO		/*	구사업장관리번호	*/
+              ,	OLD_BSBGN_NO		/*	구사업개시번호	*/
+              ,	NLEDGER_NO		/*	새원부번호	*/
+              ,	NLEDGER_SRT_NO		/*	새원부개시번호	*/
+              ,	KWS_FRST_INPUT_DT		/*	근복단최초입력일시	*/
+              ,	KWS_LAST_CHANGE_DT		/*	근복단최종변경일시	*/
+              ,	UBP_SE_CD		/*	통합사업장구분코드	*/
+              ,	UBP_RNDM_SE_CD		/*	통합사업장임의구분코드	*/
+              ,	UBP_LAST_ST_SE_CD		/*	통합사업장최종상태구분코드	*/
+              ,	UBP_HCADGC_SE_CD		/*	통합사업장본지사구분코드	*/
+              ,	UBP_AREA_FXNUM		/*	통합사업장지역팩스번호	*/
+              ,	UBP_FRNT_FXNUM		/*	통합사업장앞자리팩스번호	*/
+              ,	UBP_SUFX_FXNUM		/*	통합사업장뒷자리팩스번호	*/
+              ,	KWS_MNG_BRFFC_CD		/*	근복단관리지사코드	*/
+              ,	KWS_PROCESS_BRFFC_CD		/*	근복단처리지사코드	*/
+              ,	UBP_TOT_ORDTM_NMPR_CO		/*	통합사업장총상시인원수	*/
+              ,	UBP_FRST_FORMATN_DY		/*	통합사업장최초성립일자	*/
+              ,	UBP_LAST_EXTSH_DY		/*	통합사업장최종소멸일자	*/
+              ,	UBP_EXTSH_SE_CD		/*	통합사업장소멸구분코드	*/
+              ,	UBP_AREA_SE_CD		/*	통합사업장지역구분코드	*/
+              ,	UBP_RDNMADR_CD		/*	통합사업장도로명주소코드	*/
+              ,	UBP_SANCTN_DY		/*	통합사업장결재일자	*/
+              ,	CPR_REGIST_NO		/*	법인등록번호	*/
+              ,	CPR_SE_CD		/*	법인구분코드	*/
+              ,	CPR_CL_SE_CD		/*	법인분류구분코드	*/
+              ,	CPR_KND_SE_CD		/*	법인종류구분코드	*/
+              ,	BSNS_KND_SE_CD		/*	사업종류구분코드	*/
+              ,	MNPRT_NM		/*	주생산품명	*/
+              ,	BPLC_EMAIL		/*	사업장이메일	*/
+              ,	BPLC_URL		/*	사업장URL	*/
+              ,	KWS_TOT_BPLC_CO		/*	근복단총사업장수	*/
+              ,	SPCL_STLE_LABRR_SE_CD		/*	특수형태근로자구분코드	*/
+              ,	NATION_SE_CD		/*	국가구분코드	*/
+              ,	TOT_CNTRWK_AMOUNT		/*	총공사금액	*/
+              ,	CNTRWK_SE_CD		/*	공사구분코드	*/
+              ,	YEAR_NMPR_CO		/*	연인원수	*/
+              ,	ORDER_OFFIC_MNG_NO		/*	발주처관리번호	*/
+              ,	ORDER_NM		/*	발주처명	*/
+              ,	CTNU_TMLMT_BSNS_SE_CD		/*	계속기한사업구분코드	*/
+              ,	INSRNC_SE_CD		/*	보험구분코드	*/
+              ,	BNDE_CNVRS_YN		/*	일괄전환여부	*/
+              ,	LGGNG_ENRL_QY		/*	벌목재적량	*/
+              ,	ORDER_TOT_CNTRWK_AMOUNT		/*	발주총공사금액	*/
+              ,	CNTRCT_AMOUNT		/*	계약금액	*/
+              ,	MATRL_CNVRSN_AMOUNT		/*	재료환산금액	*/
+              ,	CNTRCT_DY		/*	계약일자	*/
+              ,	CTRTC_STRWRK_DY		/*	계약서착공일자	*/
+              ,	SIL_STRWRK_DY		/*	실착공일자	*/
+              ,	COMPET_PREARNGE_DY		/*	준공예정일자	*/
+              ,	PRMISN_DY		/*	허가일자	*/
+              ,	PRMISN_NO		/*	허가번호	*/
+              ,	PRMISN_INSTT_NM		/*	허가기관명	*/
+              ,	INDUSAC_BSNS_SE_CD		/*	산재사업구분코드	*/
+              ,	INDUSAC_BPLC_ST_SE_CD		/*	산재사업장상태구분코드	*/
+              ,	INDUSAC_FORMATN_DY		/*	산재성립일자	*/
+              ,	INDUSAC_EXTSH_DY		/*	산재소멸일자	*/
+              ,	INDUSAC_ORDTM_NMPR_CO		/*	산재상시인원수	*/
+              ,	INDUSAC_SRT_ST_SE_CD		/*	산재개시상태구분코드	*/
+              ,	INDUSAC_BNDE_CNVRS_YN		/*	산재일괄전환여부	*/
+              ,	INDUSAC_RCEPT_NO		/*	산재접수번호	*/
+              ,	INDUSAC_RCEPT_DY		/*	산재접수일자	*/
+              ,	INDUSAC_SANCTN_DY		/*	산재결재일자	*/
+              ,	INDUSAC_CONFM_DY		/*	산재승인일자	*/
+              ,	BFCHG_EMPLYM_INDUTY_CD		/*	변경전고용업종코드	*/
+              ,	EMPLYM_BSNS_SE_CD		/*	고용사업구분코드	*/
+              ,	EMPLYM_BPLC_ST_SE_CD		/*	고용사업장상태구분코드	*/
+              ,	EMPLYM_FORMATN_DY		/*	고용성립일자	*/
+              ,	EMPLYM_EXTSH_DY		/*	고용소멸일자	*/
+              ,	EMPLYM_ORDTM_NMPR_CO		/*	고용상시인원수	*/
+              ,	MALE_LABRR_CO		/*	남자근로자수	*/
+              ,	FEMALE_LABRR_CO		/*	여성근로자수	*/
+              ,	OP_LABRR_CO		/*	장년근로자수	*/
+              ,	FRGNR_LABRR_CO		/*	외국인근로자수	*/
+              ,	DSPSN_LABRR_CO		/*	장애인근로자수	*/
+              ,	EMPLYM_SRT_ST_SE_CD		/*	고용개시상태구분코드	*/
+              ,	EMPLYM_BNDE_CNVRS_YN		/*	고용일괄전환여부	*/
+              ,	EMPLYM_RCEPT_NO		/*	고용접수번호	*/
+              ,	EMPLYM_RCEPT_DY		/*	고용접수일자	*/
+              ,	EMPLYM_SANCTN_DY		/*	고용결재일자	*/
+              ,	EMPLYM_BNDE_CNVRS_SE_CD		/*	고용일괄전환구분코드	*/
+              ,	EMPLYM_MNG_NO		/*	고용관리번호	*/
+              ,	JOB_SE_CD		/*	업무구분코드	*/
+              ,	FRST_INPUSR_ID		/*	최초입력자아이디	*/
+              ,	FRST_INPUT_DEPT_CD		/*	최초입력부서코드	*/
+              ,	FRST_INPUT_BRFFC_CD		/*	최초입력지사코드	*/
+              ,	FRST_INPUT_DT		/*	최초입력일시	*/
+              ,	LAST_UPDUSR_ID		/*	최종수정자아이디	*/
+              ,	LAST_UPDT_DEPT_CD		/*	최종수정부서코드	*/
+              ,	LAST_UPDT_BRFFC_CD		/*	최종수정지사코드	*/
+              ,	LAST_UPDT_DT		/*	최종수정일시	*/
+            ) VALUES (
+              	I_O_UKEY_MAP_MNG_NO		/*	통합사업장사업관계키맵관리번호	*/
+              ,	T_BEGIN_DT		/*	이력시작일시	*/
+              ,	'99991231235959'		/*	이력종료일시	*/
+              ,	'0'		/*	통합사업장병합구분코드	*/
+              ,	TRIM(T_O_UKEY_MNG_NO)		/*	통합사업장병합관리번호	*/
+              ,	DECODE(AA1.SAEOP_NO,'',T_O_BPLC_MNG_NO,AA1.SAEOP_NO)		/*	사업장관리번호	*/
+              ,	DECODE(AA1.SAEOPGAESI_NO,'',T_O_BSBGN_NO,AA1.SAEOPGAESI_NO)		/*	사업개시번호	*/
+              ,	TRIM(AA1.SAEOP_NO)		/*	통합사업장관리번호	*/
+              ,	TRIM(AA1.SAEOPJANG_NM)		/*	통합사업장명	*/
+              ,	TRIM(AA1.SAEOPJANG_SEARCH_NM)		/*	통합사업장검색어명	*/
+              ,	I_O_UKEY_MAP_MNG_NO		/*	이해관계인키맵관리번호	*/
+              ,	TRIM(AA1.SAEOPJU_NM)		/*	통합사업장대표자명	*/
+              ,	TRIM(AA1.SAEOP_REG_NO)		/*	통합사업장사업자등록번호	*/
+              ,	T_UBPCR_YN		/*	통합사업장공동대표여부	*/
+              ,	AA1.SJ_EOPJONG_CD	/*	통합사업장산재업종코드	*/
+              ,	AA1.GY_EOPJONG_CD	/*	통합사업장고용업종코드	*/
+              ,	TRIM(AA1.SAEOPJANG_ZIP_CD)	/*	통합사업장우편번호	*/
+              ,	TRIM(AA1.SAEOPJANG_ADDR1)		/*	통합사업장기본주소	*/
+              ,	TRIM(AA1.SAEOPJANG_ADDR2)		/*	통합사업장상세주소	*/
+              ,	TRIM(AA1.SAEOPJANG_BYEONGHAENG_ADDR)		/*	통합사업장병행상세주소	*/
+              ,	T_TEL_NUM1		/*	통합사업장지역전화번호	*/
+              ,	T_TEL_NUM2		/*	통합사업장앞자리전화번호	*/
+              ,	T_TEL_NUM3		/*	통합사업장뒷자리전화번호	*/
+              ,	I_EMLBR_MNG_BRFFC_CD		/*	고용노동부관리지사코드	*/
+              ,	I_KOSHA_MNG_BRFFC_CD		/*	안전보건공단관리지사코드	*/
+              ,	''		/*	통합사업장병합차수	*/
+              ,	''		/*	통합사업장병합시작일시	*/
+              ,	''		/*	통합사업장병합종료일시	*/
+              ,	''		/*	통합사업장병합주된사업장관리번호	*/
+              ,	TRIM(AA1.SAEOPGAESI_ORD_NO)		/*	사업개시순서번호	*/
+              ,	''		/*	전송대상구분코드	*/
+              ,	''		/*	전송완료구분코드	*/
+              ,	''		/*	4대보험사업장관리번호	*/
+              ,	''		/*	4대보험사업개시번호	*/
+              ,	TRIM(AA1.MAIN_GWANRI_NO)		/*	주된사업장관리번호	*/
+              ,	TRIM(AA1.MAIN_GAESI_NO)		/*	주된사업개시번호	*/
+              ,	''		/*	원수급사업장관리번호	*/
+              ,	''		/*	원수급개시번호	*/
+              ,	''		/*	구사업장관리번호	*/
+              ,	''		/*	구사업개시번호	*/
+              ,	''		/*	새원부번호	*/
+              ,	''		/*	새원부개시번호	*/
+              ,	''		/*	근복단최초입력일시	*/
+              ,	''		/*	근복단최종변경일시	*/
+              ,	AA1.SAEOP_GONGSA_GB		/*	통합사업장구분코드	*/
+              , AA1.IMSI_GB		/*	통합사업장임의구분코드	*/
+              ,	''		/*	통합사업장최종상태구분코드	*/
+              ,	T_UBP_HCADGC_SE_CD		/*	통합사업장본지사구분코드	*/
+              ,	T_FAX_NUM1		/*	통합사업장지역팩스번호	*/
+              ,	T_FAX_NUM2		/*	통합사업장앞자리팩스번호	*/
+              ,	T_FAX_NUM3		/*	통합사업장뒷자리팩스번호	*/
+              ,	''		/*	근복단관리지사코드	*/
+              ,	''		/*	근복단처리지사코드	*/
+              ,	AA1.TOT_INWON_CNT		/*	통합사업장총상시인원수	*/
+              ,	''		/*	통합사업장최초성립일자	*/
+              ,	''		/*	통합사업장최종소멸일자	*/
+              ,	''		/*	통합사업장소멸구분코드	*/
+              ,	T_UBP_AREA_SE_CD		/*	통합사업장지역구분코드	*/
+              ,	T_UBP_RDNMADR_CD		/*	통합사업장도로명주소코드	*/
+              ,	''		/*	통합사업장결재일자	*/
+              ,	AA1.BEOPIN_REG_NO		/*	법인등록번호	*/
+              ,	''		/*	법인구분코드	*/
+              ,	''		/*	법인분류구분코드	*/
+              ,	''		/*	법인종류구분코드	*/
+              ,	''		/*	사업종류구분코드	*/
+              ,	''		/*	주생산품명	*/
+              ,	''		/*	사업장이메일	*/
+              ,	''		/*	사업장URL	*/
+              ,	''		/*	근복단총사업장수	*/
+              ,	''		/*	특수형태근로자구분코드	*/
+              ,	''		/*	국가구분코드	*/
+              ,	AA1.TOT_GONGSA_AMT		/*	총공사금액	*/
+              ,	''		/*	공사구분코드	*/
+              ,	AA1.TOT_INWON_CNT		/*	연인원수	*/
+              ,	''		/*	발주처관리번호	*/
+              ,	''		/*	발주처명	*/
+              ,	''		/*	계속기한사업구분코드	*/
+              ,	''		/*	보험구분코드	*/
+              ,	''		/*	일괄전환여부	*/
+              ,	''		/*	벌목재적량	*/
+              , ''		/*	발주총공사금액	*/
+              ,	''		/*	계약금액	*/
+              ,	''		/*	재료환산금액	*/
+              ,	''		/*	계약일자	*/
+              ,	''		/*	계약서착공일자	*/
+              ,	''		/*	실착공일자	*/
+              ,	''		/*	준공예정일자	*/
+              ,	''		/*	허가일자	*/
+              ,	''		/*	허가번호	*/
+              ,	''		/*	허가기관명	*/
+              ,	''		/*	산재사업구분코드	*/
+              ,	''		/*	산재사업장상태구분코드	*/
+              ,	''		/*	산재성립일자	*/
+              ,	''		/*	산재소멸일자	*/
+              ,	''		/*	산재상시인원수	*/
+              ,	''		/*	산재개시상태구분코드	*/
+              ,	''		/*	산재일괄전환여부	*/
+              ,	''		/*	산재접수번호	*/
+              ,	''		/*	산재접수일자	*/
+              ,	''		/*	산재결재일자	*/
+              ,	''		/*	산재승인일자	*/
+              ,	''		/*	변경전고용업종코드	*/
+              ,	''		/*	고용사업구분코드	*/
+              ,	''		/*	고용사업장상태구분코드	*/
+              ,	''		/*	고용성립일자	*/
+              ,	''		/*	고용소멸일자	*/
+              ,	AA1.TOT_INWON_CNT		/*	고용상시인원수	*/
+              ,	''		/*	남자근로자수	*/
+              ,	''		/*	여성근로자수	*/
+              ,	''		/*	장년근로자수	*/
+              ,	''		/*	외국인근로자수	*/
+              ,	''		/*	장애인근로자수	*/
+              ,	''		/*	고용개시상태구분코드	*/
+              ,	''		/*	고용일괄전환여부	*/
+              ,	''		/*	고용접수번호	*/
+              ,	''		/*	고용접수일자	*/
+              ,	''		/*	고용결재일자	*/
+              ,	''		/*	고용일괄전환구분코드	*/
+              ,	''		/*	고용관리번호	*/
+              ,	''		/*	업무구분코드	*/
+              ,	''		/*	최초입력자아이디	*/
+              ,	''		/*	최초입력부서코드	*/
+              ,	''		/*	최초입력지사코드	*/
+              ,	T_BEGIN_DT		/*	최초입력일시	*/
+              ,	''		/*	최종수정자아이디	*/
+              ,	''		/*	최종수정부서코드	*/
+              ,	''		/*	최종수정지사코드	*/
+              ,	T_END_DT		/*	최종수정일시	*/
+            );
+            -- A_CM_A00100_HIS 입력 끝
+
+            -- A_CM_B00100 입력 시작
+			INSERT INTO USR_UBP.A_CM_B00100 (
+              	UDSRLH_MNG_NO		/*	이해관계인관리번호	*/
+              ,	UDSRLH_NM		/*	이해관계인명	*/
+              ,	UDSRLH_SEXDSTN_SE_CD		/*	이해관계인성별구분코드	*/
+              ,	UDSRLH_NTFRR_SE_CD		/*	이해관계인내외국인구분코드	*/
+              ,	UDSRLH_NRMLT_TMPR_YN		/*	이해관계인정상임시여부	*/
+              ,	UDSRLH_BRTHDY		/*	이해관계인생년월일	*/
+              ,	UDSRLH_IHIDNUM		/*	이해관계인주민등록번호	*/
+              ,	UDSRLH_PSPRNBR		/*	이해관계인여권번호	*/
+              ,	UDSRLH_FGNRNO		/*	이해관계인외국인등록번호	*/
+              ,	UDSRLH_ZIP		/*	이해관계인우편번호	*/
+              ,	UDSRLH_BASS_ADRES		/*	이해관계인기본주소	*/
+              ,	UDSRLH_DETAIL_ADRES		/*	이해관계인상세주소	*/
+              ,	UDSRLH_PRL_DETAIL_ADRES		/*	이해관계인병행상세주소	*/
+              ,	UDSRLH_CBLE_TELNO		/*	이해관계인유선전화번호	*/
+              ,	UDSRLH_WRLESS_TELNO		/*	이해관계인무선전화번호	*/
+              ,	NATION_SE_CD		/*	국가구분코드	*/
+            ) VALUES (
+              	I_O_UKEY_MNG_NO  		/*	이해관계인관리번호	*/
+              ,	AA1.SAEOPJU_NM		/*	이해관계인명	*/
+              ,	I_SAEOPJU_SEX		/*	이해관계인성별구분코드	*/
+              ,	T_UDSRLH_NTFRR_SE_CD		/*	이해관계인내외국인구분코드	*/
+              ,	''		/*	이해관계인정상임시여부	*/
+              ,	I_SAEOPJU_NUM1		/*	이해관계인생년월일	*/
+              ,	DECODE(T_UDSRLH_NTFRR_SE_CD,'1',AA1.SAEOPJU_REG_NO,'')		/*	이해관계인주민등록번호	*/
+              ,	''		/*	이해관계인여권번호	*/
+              ,	DECODE(T_UDSRLH_NTFRR_SE_CD,'2',AA1.SAEOPJU_REG_NO,'')		/*	이해관계인외국인등록번호	*/
+              ,	AA1.SAEOPJU_ZIP_CD		/*	이해관계인우편번호	*/
+              ,	AA1.SAEOPJU_ADDR1		/*	이해관계인기본주소	*/
+              ,	AA1.SAEOPJU_ADDR2		/*	이해관계인상세주소	*/
+              ,	AA1.SAEOPJU_BYEONGHAENG_ADDR		/*	이해관계인병행상세주소	*/
+              ,	AA1.SAEOPJU_TEL		/*	이해관계인유선전화번호	*/
+              ,	AA1.SAEOPJU_TEL		/*	이해관계인무선전화번호	*/
+              ,	''		/*	국가구분코드	*/
+            );
+
+            -- A_CM_B00100 입력 끝
+
+            -- A_CM_B00100_HIS 입력 시작
+
+			INSERT INTO USR_UBP.A_CM_B00101_HIS (
+            	UDSRLH_KMAP_MNG_NO		/*	이해관계인키맵관리번호		*/
+              ,	HIST_BEGIN_DT		/*	이력시작일시		*/
+              ,	HIST_END_DT		/*	이력종료일시		*/
+              ,	UDSRLH_MRG_SE_CD		/*	이해관계인병합구분코드		*/
+              ,	UDSRLH_MRG_MNG_NO		/*	이해관계인병합관리번호		*/
+              ,	UDSRLH_MNG_NO		/*	이해관계인관리번호		*/
+              ,	UDSRLH_NM		/*	이해관계인명		*/
+              ,	UDSRLH_NTFRR_SE_CD		/*	이해관계인내외국인구분코드		*/
+              ,	UDSRLH_NRMLT_TMPR_YN		/*	이해관계인정상임시여부		*/
+              ,	UDSRLH_MRG_BEGIN_DT		/*	이해관계인병합시작일시		*/
+              ,	UDSRLH_MRG_ODR		/*	이해관계인병합차수		*/
+              ,	UDSRLH_MRG_END_DT		/*	이해관계인병합종료일시		*/
+              ,	UDSRLH_PSPRNBR		/*	이해관계인여권번호		*/
+              ,	UDSRLH_FGNRNO		/*	이해관계인외국인등록번호		*/
+              ,	UDSRLH_IHIDNUM		/*	이해관계인주민등록번호		*/
+              ,	UDSRLH_SEXDSTN_SE_CD		/*	이해관계인성별구분코드		*/
+              ,	UDSRLH_BRTHDY		/*	이해관계인생년월일		*/
+              ,	UDSRLH_ZIP		/*	이해관계인우편번호		*/
+              ,	UDSRLH_BASS_ADRES		/*	이해관계인기본주소		*/
+              ,	UDSRLH_DETAIL_ADRES		/*	이해관계인상세주소		*/
+              ,	UDSRLH_PRL_DETAIL_ADRES		/*	이해관계인병행상세주소		*/
+              ,	UDSRLH_CBLE_TELNO		/*	이해관계인유선전화번호		*/
+              ,	UDSRLH_WRLESS_TELNO		/*	이해관계인무선전화번호		*/
+              ,	NATION_SE_CD		/*	국가구분코드		*/
+              ,	FRST_INPUSR_ID		/*			*/
+              ,	FRST_INPUT_DEPT_CD		/*	최초입력부서코드		*/
+              ,	FRST_INPUT_BRFFC_CD		/*	최초입력지사코드		*/
+              ,	FRST_INPUT_DT		/*	최초입력일시		*/
+              ,	LAST_UPDUSR_ID		/*	최종수정자아이디		*/
+              ,	LAST_UPDT_DEPT_CD		/*	최종수정부서코드		*/
+              ,	LAST_UPDT_BRFFC_CD		/*	최종수정지사코드		*/
+              ,	LAST_UPDT_DT
+            ) VALUES (
+				TRIM(I_O_UKEY_MAP_MNG_NO)    /*	이해관계인키맵관리번호	*/
+              ,	T_BEGIN_DT		/*	이력시작일시		*/
+              ,	T_END_DT		/*	이력종료일시		*/
+              ,	''		/*	이해관계인병합구분코드		*/
+              ,	'0'		/*	이해관계인병합관리번호		*/
+              ,	I_O_UKEY_MNG_NO 		/*	이해관계인관리번호		*/
+              ,	AA1.SAEOPJU_NM		/*	이해관계인명		*/
+              ,	T_UDSRLH_NTFRR_SE_CD		/*	이해관계인내외국인구분코드		*/
+              ,	''		/*	이해관계인정상임시여부		*/
+              ,	''		/*	이해관계인병합시작일시		*/
+              ,	''		/*	이해관계인병합차수		*/
+              ,	''		/*	이해관계인병합종료일시		*/
+              ,	''		/*	이해관계인여권번호		*/
+              ,	DECODE(T_UDSRLH_NTFRR_SE_CD,'2',AA1.SAEOPJU_REG_NO,'')			/*	이해관계인외국인등록번호		*/
+              ,	DECODE(T_UDSRLH_NTFRR_SE_CD,'1',AA1.SAEOPJU_REG_NO,'')	/*	이해관계인주민등록번호		*/
+              ,	I_SAEOPJU_SEX		/*	이해관계인성별구분코드		*/
+              ,	I_SAEOPJU_NUM1			/*	이해관계인생년월일		*/
+              ,	AA1.SAEOPJU_ZIP_CD		/*	이해관계인우편번호		*/
+              ,	AA1.SAEOPJU_ADDR1		/*	이해관계인기본주소	*/
+              ,	AA1.SAEOPJU_ADDR2		/*	이해관계인상세주소	*/
+              ,	AA1.SAEOPJU_BYEONGHAENG_ADDR		/*	이해관계인병행상세주소	*/
+              ,	AA1.SAEOPJU_TEL		/*	이해관계인유선전화번호	*/
+              ,	AA1.SAEOPJU_TEL		/*	이해관계인무선전화번호	*/
+              ,	''		/*	국가구분코드		*/
+              ,	''		/*			*/
+              ,	''		/*	최초입력부서코드		*/
+              ,	''		/*	최초입력지사코드		*/
+              ,	T_BEGIN_DT		/*	최초입력일시		*/
+              ,	''		/*	최종수정자아이디		*/
+              ,	''		/*	최종수정부서코드		*/
+              ,	''		/*	최종수정지사코드		*/
+              ,	T_END_DT
+            );
+
+            -- A_CM_B00100_HIS 입력
+            ELSE
+
+                T_TEL_TOT := AA1.SAEOPJANG_TEL;
+                IF T_TEL_TOT IS NULL OR T_TEL_TOT = '' THEN
+                    T_TEL_NUM1 := '';
+                    T_TEL_NUM2 := '';
+                    T_TEL_NUM3 := '';
+                ELSE
+                    SELECT REGEXP_SUBSTR(T_TEL_TOT, '[^-]*')  INTO T_TEL_NUM1 FROM DUAL;   -- 첫번째 자리
+                    SELECT REGEXP_SUBSTR(REPLACE(T_TEL_TOT, REGEXP_SUBSTR(T_TEL_TOT, '[^-]*')||'-',''), '[^-]*') INTO T_TEL_NUM2 FROM DUAL;  -- 두번? 자리
+                    SELECT REGEXP_SUBSTR(T_TEL_TOT, '[^-]*$') INTO T_TEL_NUM3 FROM DUAL;	  -- 마지막 자리
+                END IF;
+
+                T_FAX_TOT := AA1.SAEOPJANG_FAX;
+
+                IF T_FAX_TOT IS NULL OR T_FAX_TOT = '' THEN
+                    T_FAX_NUM1 := '';
+                    T_FAX_NUM2 := '';
+                    T_FAX_NUM3 := '';
+                ELSE
+                    SELECT REGEXP_SUBSTR(T_FAX_TOT, '[^-]*') INTO T_FAX_NUM1 FROM DUAL;   -- 첫번째 자리
+                    SELECT REGEXP_SUBSTR(REPLACE(T_FAX_TOT, REGEXP_SUBSTR(T_FAX_TOT, '[^-]*')||'-',''), '[^-]*') INTO T_FAX_NUM2 FROM DUAL;  -- 두번? 자리
+                    SELECT REGEXP_SUBSTR(T_FAX_TOT, '[^-]*$') INTO  T_FAX_NUM3 FROM DUAL;	  -- 마지막 자리
+                END IF;
+
+                -- 관리지사 설정
+                --그룹카운트수 1자리 (보통은 1 예외는 2) +  노동부 관리지사 4자리 + 공단 관리지사 2자리
+                -- substr(return  ,2,6) = '000000' 일때 예외 처리
+                -- I_KOSHA_MNG_BRFFC_CD := ''; -- 안전보건공단 관리지사 코드
+                -- I_EMLBR_MNG_BRFFC_CD := '';  -- 고용노동부 관리지사 코드
+                I_GUBUN_ZIP_CD := USR_UBP.FN_A_CM_00100(TRIM(AA1.SAEOPJANG_ZIP_CD), TRIM(AA1.SAEOPJANG_ADDR_REG_NO), TRIM(AA1.SAEOPJANG_ADDR1), TRIM(AA1.SAEOPJANG_ADDR2));
+                I_GUBUN_ZIP_CD := SUBSTR(I_GUBUN_ZIP_CD,2,6);
+
+                IF I_GUBUN_ZIP_CD = '000000' THEN
+                      -- 우편번호 예외처리 INSERT
+                      INSERT INTO USR_UBP.A_CM_E00101_LOG
+                              (EXCP_PRSS_MNG_NO
+                              ,EXCP_PRSS_OCCRRNC_DY
+                              ,UBP_ZIP
+                              ,EMLBR_MNG_BRFFC_CD
+                              ,KOSHA_MNG_BRFFC_CD
+                              ) VALUES (
+                                (SELECT LPAD((SELECT /*+ INDEX_DESC(A A_CM_E00101_LOG_PK) */
+                                NVL( MAX(EXCP_PRSS_MNG_NO),0)  FROM USR_UBP.A_CM_E00101_LOG
+                                WHERE EXCP_PRSS_MNG_NO < '99999999999'
+                                ) + 1,9,'0') FROM DUAL)
+                                , TO_CHAR(SYSDATE,'RRRRMMDD')
+                                , AA1.SAEOPJANG_ZIP_CD
+                                ,'00'
+                                ,'0000'
+                              );
+                      COMMIT;
+                 END IF;
+                 I_KOSHA_MNG_BRFFC_CD := SUBSTR(I_GUBUN_ZIP_CD,2,4);  -- 안전보건공단 관리지사 코드
+                 I_EMLBR_MNG_BRFFC_CD := SUBSTR(I_GUBUN_ZIP_CD,5,2);  -- 고용노동부 관리지사 코드
+
+                 -- 본/지사 설정
+                 -- 사업장관리번호(AA1.SAEOP_NO)와 주된사업장 관리번호(AA1.MAIN_GWANRI_NO)가 같으면 본사 다르면 지사
+                 IF AA1.SAEOP_NO = AA1.MAIN_GWANRI_NO THEN T_UBP_HCADGC_SE_CD := '1';
+                 ELSE T_UBP_HCADGC_SE_CD := '2';
+                 END IF;
+
+                 -- 산재업종구분코드(AA1.SJ_EOPJONG_CD) 값이 2,4,8 이면 공사장 아니면 사업장
+                 IF AA1.SJ_EOPJONG_CD = '2' OR  AA1.SJ_EOPJONG_CD = '4' OR  AA1.SJ_EOPJONG_CD = '8' THEN T_UBP_SE_CD := '1';
+                 ELSE T_UBP_SE_CD := '2'; END IF;
+
+                  -- 이해관계인 주민번호  분할 셋팅
+                  -- 주민번호 셋팅
+                  -- 남
+                  -- I_SAEOPJU_REG_NO
+                  I_SAEOPJU_REG_NO := NVL(AA1.SAEOPJU_REG_NO,'');  -- 주민번호 셋팅
+                  IF I_SAEOPJU_REG_NO <> '' THEN
+                     I_SAEOPJU_REG_NO := REPLACE(TRIM(I_SAEOPJU_REG_NO),'-','');
+                     I_SAEOPJU_NUM1  := SUBSTR(I_SAEOPJU_REG_NO,1,6);  -- 주민번호 앞자리
+                     I_SAEOPJU_NUM2  := SUBSTR(I_SAEOPJU_REG_NO,7,7);  -- 주민번호 뒷자리
+                    --I_SAEOPJU_SEX   := SUBSTR(I_SAEOPJU_NUM2,1,1);
+                    -- 생년월일 셋팅
+                    IF SUBSTR(I_SAEOPJU_SEX,1,1) = '1' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '2' THEN I_BIRTHDAY := '19' || I_SAEOPJU_NUM1; T_UDSRLH_NTFRR_SE_CD := '1';
+                    ELSIF SUBSTR(I_SAEOPJU_SEX,1,1) = '3' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '4' THEN I_BIRTHDAY := '20' || I_SAEOPJU_NUM1; T_UDSRLH_NTFRR_SE_CD := '1';
+                    ELSIF SUBSTR(I_SAEOPJU_SEX,1,1) = '5' THEN T_UDSRLH_NTFRR_SE_CD := '2'; END IF;
+                    -- 남녀구분 셋팅
+                    IF SUBSTR(I_SAEOPJU_SEX,1,1) = '1' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '3' THEN I_SAEOPJU_SEX := 'M';-- 남자
+                    ELSIF SUBSTR(I_SAEOPJU_SEX,1,1) = '2' OR SUBSTR(I_SAEOPJU_SEX,1,1) = '4' THEN I_SAEOPJU_SEX := 'F'; END IF;-- 여자
+                  END IF;
+
+                  SELECT TO_CHAR(SYSDATE - 1/(24*60*60),'YYYYMMDDHH24MISS') INTO T_END_DT FROM DUAL;	/*종료일시*/
+                  SELECT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') INTO T_BEGIN_DT FROM DUAL;				/*시작일시*/
+
+                  --  A_CM_E00101 테이블의 ROAD_NM_CD의  UBP_AREA_SE_CD	 앞 5자리 UBP_RDNMADR_CD 나머지 10자리
+
+                  IF LENGTH(AA1.SAEOPJANG_ZIP_CD) = 5 THEN -- 신우편번호
+                      SELECT TRIM(ROAD_NM_CD) INTO T_UBP_RDNMADR_CD FROM  USR_UBP.A_CM_E00101 WHERE ZIP = TRIM(AA1.SAEOPJANG_ZIP_CD);
+                      T_UBP_AREA_SE_CD := SUBSTR(T_UBP_RDNMADR_CD,1,5) ;
+                  ELSIF LENGTH(AA1.SAEOPJANG_ZIP_CD) = 6 THEN  -- 구우편번호
+                      SELECT TRIM(ROAD_NM_CD) INTO T_UBP_RDNMADR_CD FROM  USR_UBP.A_CM_E00101 WHERE OLD_ZIP = TRIM(AA1.SAEOPJANG_ZIP_CD);
+                      T_UBP_AREA_SE_CD := SUBSTR(T_UBP_RDNMADR_CD,1,5) ;
+                  END IF;
+
+              /*********************************************
+              입력변수
+              T_UBPCR_YN -- 공동대표여부
+              T_TEL_NUM1 -- 전화번호(지역전화번호)
+              T_TEL_NUM2 -- 전화번호(앞자리)
+              T_TEL_NUM3 -- 전화번호(뒷자리)
+              T_FAX_NUM1 -- FAX번호(지역전화번호)
+              T_FAX_NUM2 -- FAX번호(앞자리)
+              T_FAX_NUM3 -- FAX번호(뒷자리)
+              I_KOSHA_MNG_BRFFC_CD -- 안전보건공단 관리지사 코드
+              I_EMLBR_MNG_BRFFC_CD   -- 고용노동부 관리지사 코드
+              T_UBP_HCADGC_SE_CD -- 본/지사구분
+              T_UBP_SE_CD -- 산재업종구분코드
+              I_BIRTHDAY  -- 생년월일
+              T_UDSRLH_NTFRR_SE_CD -- 내외국인구분코드
+              T_UBP_AREA_SE_CD -- 통합사업장지역구분코드
+              T_UBP_RDNMADR_CD -- 통합사업장도로명주소코드
+              T_END_DT -- 종료일시
+              T_BEGIN_DT -- 시작일시
+              *********************************************/
+
+            -- UPDATE 테이블 입력 시작
+
+			-- A_CM_A00100 -- 시작
+            UPDATE USR_UBP.A_CM_A00100
+            SET UBP_NM	 = 	 AA1.SAEOPJANG_NM	/*	통합사업장명		*/
+              ,	UBP_SRCHWRD_NM	 = AA1.SAEOPJANG_NM	/*	통합사업장검색어명		*/
+              --,	UDSRLH_KMAP_MNG_NO	 = 		/*	이해관계인키맵관리번호		*/
+              ,	UBP_RPR_NM	 = 	AA1.SAEOPJU_NM	/*	통합사업장대표자명		*/
+              ,	UBP_BIZRNO	 = 	AA1.SAEOP_REG_NO	/*	통합사업장사업자등록번호		*/
+              ,	UBPCR_YN	 = 	T_UBPCR_YN	/*	통합사업장공동대표여부		*/
+              ,	UBP_INDUSAC_INDUTY_CD	 = 	T_UBP_SE_CD	/*	통합사업장산재업종코드		*/
+              --,	UBP_EMPLYM_INDUTY_CD	 = 		/*	통합사업장고용업종코드		*/
+              ,	UBP_ZIP	 = 	AA1.SAEOPJANG_ZIP_CD	/*	통합사업장우편번호		*/
+              ,	UBP_BASS_ADRES	 = 	AA1.SAEOPJANG_ADDR1	/*	통합사업장기본주소		*/
+              ,	UBP_DETAIL_ADRES	 = 	AA1.SAEOPJANG_ADDR2	/*	통합사업장상세주소		*/
+              ,	UBP_PRL_DETAIL_ADRES	 = 	AA1.SAEOPJANG_BYEONGHAENG_ADDR	/*	통합사업장병행상세주소		*/
+              ,	UBP_AREA_TELNO	 = 	T_TEL_NUM1	/*	통합사업장지역전화번호		*/
+              ,	UBP_FRNT_TELNO	 = 	T_TEL_NUM2	/*	통합사업장앞자리전화번호		*/
+              ,	UBP_SUFX_TELNO	 = 	T_TEL_NUM3	/*	통합사업장뒷자리전화번호		*/
+              ,	EMLBR_MNG_BRFFC_CD	 = 	I_KOSHA_MNG_BRFFC_CD	/*	고용노동부관리지사코드		*/
+              ,	KOSHA_MNG_BRFFC_CD	 = 	I_EMLBR_MNG_BRFFC_CD	/*	안전보건공단관리지사코드		*/
+              --,	UBP_SE_CD	 = 	AA1.SAEOP_GONGSA_GB	/*	통합사업장구분코드		*/
+              --,	UBP_RNDM_SE_CD	 = 		/*	통합사업장임의구분코드		*/
+              --,	UBP_LAST_ST_SE_CD	 = 		/*	통합사업장최종상태구분코드		*/
+              ,	UBP_HCADGC_SE_CD	 = 	T_UBP_HCADGC_SE_CD	/*	통합사업장본지사구분코드		*/
+              ,	UBP_AREA_FXNUM	 = 	T_FAX_NUM1	/*	통합사업장지역팩스번호		*/
+              ,	UBP_FRNT_FXNUM	 = 	T_FAX_NUM2	/*	통합사업장앞자리팩스번호		*/
+              ,	UBP_SUFX_FXNUM	 = 	T_FAX_NUM3	/*	통합사업장뒷자리팩스번호		*/
+              --,	KWS_MNG_BRFFC_CD	 = 		/*	근복단관리지사코드		*/
+              --,	KWS_PROCESS_BRFFC_CD	 = 		/*	근복단처리지사코드		*/
+              ,	UBP_TOT_ORDTM_NMPR_CO	 = 	AA1.TOT_INWON_CNT	/*	통합사업장총상시인원수		*/
+              ,	UBP_FRST_FORMATN_DY	 = AA1.SAEOP_BEGIN_DY		/*	통합사업장최초성립일자		*/
+              ,	UBP_LAST_EXTSH_DY	 = AA1.SAEOP_END_DY		/*	통합사업장최종소멸일자		*/
+              --,	UBP_EXTSH_SE_CD	 = 		/*	통합사업장소멸구분코드		*/
+              ,	UBP_AREA_SE_CD	 =  T_UBP_AREA_SE_CD		/*	통합사업장지역구분코드		*/
+              ,	UBP_RDNMADR_CD	 =  T_UBP_RDNMADR_CD		/*	통합사업장도로명주소코드		*/
+              --,	UBP_SANCTN_DY	 = 		/*	통합사업장결재일자		*/
+              ,	CPR_REGIST_NO	 = 	AA1.BEOPIN_REG_NO	/*	법인등록번호		*/
+              --,	CPR_SE_CD	 = 		/*	법인구분코드		*/
+              --,	CPR_CL_SE_CD	 = 		/*	법인분류구분코드		*/
+              -- ,CPR_KND_SE_CD	 = 		/*	법인종류구분코드		*/
+              --,	BSNS_KND_SE_CD	 = 		/*	사업종류구분코드		*/
+              --,	MNPRT_NM	 = 		/*	주생산품명		*/
+              --,	BPLC_EMAIL	 = 		/*	사업장이메일		*/
+              --,	BPLC_URL	 = 		/*	사업장URL		*/
+              --,	KWS_TOT_BPLC_CO	 = 		/*	근복단총사업장수		*/
+              --,	SPCL_STLE_LABRR_SE_CD	 = 		/*	특수형태근로자구분코드		*/
+              --,	NATION_SE_CD	 = 		/*	국가구분코드		*/
+              ,	TOT_CNTRWK_AMOUNT	 = 	AA1.TOT_GONGSA_AMT	/*	총공사금액		*/
+              --,	CNTRWK_SE_CD	 = 		/*	공사구분코드		*/
+              ,	YEAR_NMPR_CO	 = 	AA1.TOT_INWON_CNT	/*	연인원수		*/
+              --,	ORDER_OFFIC_MNG_NO	 = 		/*	발주처관리번호		*/
+              --,	ORDER_NM	 = 		/*	발주처명		*/
+              --,	CTNU_TMLMT_BSNS_SE_CD	 = 		/*	계속기한사업구분코드		*/
+              --,	INSRNC_SE_CD	 = 		/*	보험구분코드		*/
+              --,	BNDE_CNVRS_YN	 = 		/*	일괄전환여부		*/
+              --,	LGGNG_ENRL_QY	 = 		/*	벌목재적량		*/
+              --,	ORDER_TOT_CNTRWK_AMOUNT	 = AA1.TOT_GONGSA_AMT		/*	발주총공사금액		*/
+              --,	CNTRCT_AMOUNT	 = 		/*	계약금액		*/
+              --,	MATRL_CNVRSN_AMOUNT	 = 		/*	재료환산금액		*/
+              --,	CNTRCT_DY	 = 		/*	계약일자		*/
+              --,	CTRTC_STRWRK_DY	 = 		/*	계약서착공일자		*/
+              --,	SIL_STRWRK_DY	 = 		/*	실착공일자		*/
+              --,	COMPET_PREARNGE_DY	 = 		/*	준공예정일자		*/
+              --,	PRMISN_DY	 = 		/*	허가일자		*/
+              --,	PRMISN_NO	 = 		/*	허가번호		*/
+              --,	PRMISN_INSTT_NM	 = 		/*	허가기관명		*/
+              --,	INDUSAC_BSNS_SE_CD	 = 		/*	산재사업구분코드		*/
+              --,	INDUSAC_BPLC_ST_SE_CD	 = 		/*	산재사업장상태구분코드		*/
+              --,	INDUSAC_FORMATN_DY	 = 		/*	산재성립일자		*/
+              --,	INDUSAC_EXTSH_DY	 = 		/*	산재소멸일자		*/
+              --,	INDUSAC_ORDTM_NMPR_CO	 = 		/*	산재상시인원수		*/
+              --,	INDUSAC_SRT_ST_SE_CD	 = 		/*	산재개시상태구분코드		*/
+              --,	INDUSAC_BNDE_CNVRS_YN	 = 		/*	산재일괄전환여부		*/
+              --,	INDUSAC_RCEPT_NO	 = 		/*	산재접수번호		*/
+              --,	INDUSAC_RCEPT_DY	 = 		/*	산재접수일자		*/
+              --,	INDUSAC_SANCTN_DY	 = 		/*	산재결재일자		*/
+              --,	INDUSAC_CONFM_DY	 = 		/*	산재승인일자		*/
+              --,	BFCHG_EMPLYM_INDUTY_CD	 = 		/*	변경전고용업종코드		*/
+              --,	EMPLYM_BSNS_SE_CD	 = 		/*	고용사업구분코드		*/
+              --,	EMPLYM_BPLC_ST_SE_CD	 = 		/*	고용사업장상태구분코드		*/
+              --,	EMPLYM_FORMATN_DY	 = 		/*	고용성립일자		*/
+              --,	EMPLYM_EXTSH_DY	 = 		/*	고용소멸일자		*/
+              --,	EMPLYM_ORDTM_NMPR_CO	 = 		/*	고용상시인원수		*/
+              --,	MALE_LABRR_CO	 = 		/*	남자근로자수		*/
+              --,	FEMALE_LABRR_CO	 = 		/*	여성근로자수		*/
+              --,	OP_LABRR_CO	 = 		/*	장년근로자수		*/
+              --,	FRGNR_LABRR_CO	 = 		/*	외국인근로자수		*/
+              --,	DSPSN_LABRR_CO	 = 		/*	장애인근로자수		*/
+              --,	EMPLYM_SRT_ST_SE_CD	 = 		/*	고용개시상태구분코드		*/
+              --,	EMPLYM_BNDE_CNVRS_YN	 = 		/*	고용일괄전환여부		*/
+              --,	EMPLYM_RCEPT_NO	 = 		/*	고용접수번호		*/
+              --,	EMPLYM_RCEPT_DY	 = 		/*	고용접수일자		*/
+              --,	EMPLYM_SANCTN_DY	 = 		/*	고용결재일자		*/
+              --,	EMPLYM_BNDE_CNVRS_SE_CD	 = 		/*	고용일괄전환구분코드		*/
+              --,	EMPLYM_MNG_NO	 = 		/*	고용관리번호		*/
+              --,	JOB_SE_CD	 = 		/*	업무구분코드		*/
+ 		    WHERE UBP_MNG_NO =  (SELECT A.UBP_MRG_MNG_NO
+                                                           FROM A_CM_A00101 A
+                                            			              ,A_CM_A00100 B
+                                                                      ,A_CM_B00101 C	/*UDSRLH_MRG_MNG_NO   이해관계인병합관리번호 =    A_CM_B00100 (UDSRLH_MNG_NO)  이해관계인관리번호 */
+            											 WHERE 1=1
+                                                               AND A.UBP_MRG_MNG_NO = B.UBP_MNG_NO
+                                                               AND C.UDSRLH_KMAP_MNG_NO = B.UDSRLH_KMAP_MNG_NO
+                                                               AND A.BPLC_MNG_NO =  AA1.SAEOP_NO);
+
+			-- A_CM_A00100 -- 끝
+
+
+
+			-- A_CM_A00101 -- 시작
+            UPDATE USR_UBP.A_CM_A00101
+              --SET  UBP_BRL_KMAP_MNG_NO	=		/*	통합사업장사업관계키맵관리번호		*/
+              --SET  UBP_MRG_SE_CD	=		/*	통합사업장병합구분코드		*/
+               -- ,  UBP_MRG_MNG_NO	=		/*	통합사업장병합관리번호		*/
+               -- ,  BPLC_MNG_NO	=		/*	사업장관리번호		*/
+               -- ,  BSBGN_NO	=		/*	사업개시번호		*/
+               -- ,  UBP_MRG_ODR	=		/*	통합사업장병합차수		*/
+               -- ,  UBP_MRG_BEGIN_DT	=		/*	통합사업장병합시작일시		*/
+               -- ,  UBP_MRG_END_DT	=		/*	통합사업장병합종료일시		*/
+               -- ,  UBP_MRG_MAIN_BPLC_MNG_NO	=		/*	통합사업장병합주된사업장관리번호		*/
+               -- ,  BSBGN_ORDR_NO	=		/*	사업개시순서번호		*/
+               -- ,  TRNSMIS_TRGET_SE_CD	=		/*	전송대상구분코드		*/
+               -- ,  TRNSMIS_COMPT_SE_CD	=		/*	전송완료구분코드		*/
+               -- ,  FEINSR_BPLC_MNG_NO	=		/*	4대보험사업장관리번호		*/
+               -- ,  FEINSR_BSBGN_NO	=		/*	4대보험사업개시번호		*/
+               -- ,  MAIN_BPLC_MNG_NO	=		/*	주된사업장관리번호		*/
+               -- ,  MAIN_BSBGN_NO	=		/*	주된사업개시번호		*/
+               -- ,  ORNR_BPLC_MNG_NO	=		/*	원수급사업장관리번호		*/
+               -- ,  ORNR_SRT_NO	=		/*	원수급개시번호		*/
+               -- ,  OLD_BPLC_MNG_NO	=		/*	구사업장관리번호		*/
+               -- ,  OLD_BSBGN_NO	=		/*	구사업개시번호		*/
+               -- ,  NLEDGER_NO	=		/*	새원부번호		*/
+               -- ,  NLEDGER_SRT_NO	=		/*	새원부개시번호		*/
+               -- ,  KWS_FRST_INPUT_DT	=		/*	근복단최초입력일시		*/
+               -- ,  KWS_LAST_CHANGE_DT	=		/*	근복단최종변경일시		*/
+               -- ,  FRST_INPUSR_ID	=		/*	최초입력자아이디		*/
+               -- ,  FRST_INPUT_DEPT_CD	=		/*	최초입력부서코드		*/
+               -- ,  FRST_INPUT_BRFFC_CD	=		/*	최초입력지사코드		*/
+               -- ,  FRST_INPUT_DT	=		/*	최초입력일시		*/
+               -- ,  LAST_UPDUSR_ID	=		/*	최종수정자아이디		*/
+               -- ,  LAST_UPDT_DEPT_CD	=		/*	최종수정부서코드		*/
+               -- ,  LAST_UPDT_BRFFC_CD	=		/*	최종수정지사코드		*/
+               -- ,  LAST_UPDT_DT	=		/*	최종수정일시		*/
+               SET LAST_UPDT_DT	= T_END_DT		/*	최종수정일시		*/
+            WHERE UBP_BRL_KMAP_MNG_NO =  (SELECT A.UBP_BRL_KMAP_MNG_NO
+                                                                                FROM A_CM_A00101 A
+                                                                   			              ,A_CM_A00100 B
+                                                                                          ,A_CM_B00101 C	/*UDSRLH_MRG_MNG_NO   이해관계인병합관리번호 =    A_CM_B00100 (UDSRLH_MNG_NO)  이해관계인관리번호 */
+            															     WHERE 1=1
+                                                                                  AND A.UBP_MRG_MNG_NO = B.UBP_MNG_NO
+                                                                                  AND C.UDSRLH_KMAP_MNG_NO = B.UDSRLH_KMAP_MNG_NO
+                                                                                  AND A.BPLC_MNG_NO =  AA1.SAEOP_NO);
+
+
+			-- A_CM_A00101 -- 끝
+
+			-- A_CM_A00101_HIS -- 시작
+            UPDATE USR_UBP.A_CM_A00101_HIS
+              --SET  UBP_BRL_KMAP_MNG_NO	=		/*	통합사업장사업관계키맵관리번호		*/
+                SET HIST_BEGIN_DT	= T_BEGIN_DT 		/*	이력시작일시		*/
+                , HIST_END_DT	= T_END_DT 		/*	이력종료일시		*/
+                --, UBP_MRG_SE_CD	=		/*	통합사업장병합구분코드		*/
+                --, UBP_MRG_MNG_NO	=		/*	통합사업장병합관리번호		*/
+                --, BPLC_MNG_NO	=		/*	사업장관리번호		*/
+                --, BSBGN_NO	=		/*	사업개시번호		*/
+                --, UBP_MNG_NO	=		/*	통합사업장관리번호		*/
+                --, UBP_NM	=		/*	통합사업장명		*/
+                --, UBP_SRCHWRD_NM	=		/*	통합사업장검색어명		*/
+                --, UDSRLH_KMAP_MNG_NO	=		/*	이해관계인키맵관리번호		*/
+                --, UBP_RPR_NM	=		/*	통합사업장대표자명		*/
+                --, UBP_BIZRNO	=		/*	통합사업장사업자등록번호		*/
+                --, UBPCR_YN	=		/*	통합사업장공동대표여부		*/
+                --, UBP_INDUSAC_INDUTY_CD	=		/*	통합사업장산재업종코드		*/
+                --, UBP_EMPLYM_INDUTY_CD	=		/*	통합사업장고용업종코드		*/
+                --, UBP_ZIP	=		/*	통합사업장우편번호		*/
+                --, UBP_BASS_ADRES	=		/*	통합사업장기본주소		*/
+                --, UBP_DETAIL_ADRES	=		/*	통합사업장상세주소		*/
+                --, UBP_PRL_DETAIL_ADRES	=		/*	통합사업장병행상세주소		*/
+                --, UBP_AREA_TELNO	=		/*	통합사업장지역전화번호		*/
+                --, UBP_FRNT_TELNO	=		/*	통합사업장앞자리전화번호		*/
+                --, UBP_SUFX_TELNO	=		/*	통합사업장뒷자리전화번호		*/
+                --, EMLBR_MNG_BRFFC_CD	=		/*	고용노동부관리지사코드		*/
+                --, KOSHA_MNG_BRFFC_CD	=		/*	안전보건공단관리지사코드		*/
+                --, UBP_MRG_ODR	=		/*	통합사업장병합차수		*/
+                --, UBP_MRG_BEGIN_DT	=		/*	통합사업장병합시작일시		*/
+                --, UBP_MRG_END_DT	=		/*	통합사업장병합종료일시		*/
+                --, UBP_MRG_MAIN_BPLC_MNG_NO	=		/*	통합사업장병합주된사업장관리번호		*/
+                --, BSBGN_ORDR_NO	=		/*	사업개시순서번호		*/
+                --, TRNSMIS_TRGET_SE_CD	=		/*	전송대상구분코드		*/
+                --, TRNSMIS_COMPT_SE_CD	=		/*	전송완료구분코드		*/
+                --, FEINSR_BPLC_MNG_NO	=		/*	4대보험사업장관리번호		*/
+                --, FEINSR_BSBGN_NO	=		/*	4대보험사업개시번호		*/
+                --, MAIN_BPLC_MNG_NO	=		/*	주된사업장관리번호		*/
+                --, MAIN_BSBGN_NO	=		/*	주된사업개시번호		*/
+                --, ORNR_BPLC_MNG_NO	=		/*	원수급사업장관리번호		*/
+                --, ORNR_SRT_NO	=		/*	원수급개시번호		*/
+                --, OLD_BPLC_MNG_NO	=		/*	구사업장관리번호		*/
+                --, OLD_BSBGN_NO	=		/*	구사업개시번호		*/
+                --, NLEDGER_NO	=		/*	새원부번호		*/
+                --, NLEDGER_SRT_NO	=		/*	새원부개시번호		*/
+                --, KWS_FRST_INPUT_DT	=		/*	근복단최초입력일시		*/
+                --, KWS_LAST_CHANGE_DT	=		/*	근복단최종변경일시		*/
+                --, UBP_SE_CD	=		/*	통합사업장구분코드		*/
+                --, UBP_RNDM_SE_CD	=		/*	통합사업장임의구분코드		*/
+                --, UBP_LAST_ST_SE_CD	=		/*	통합사업장최종상태구분코드		*/
+                --, UBP_HCADGC_SE_CD	=		/*	통합사업장본지사구분코드		*/
+                --, UBP_AREA_FXNUM	=		/*	통합사업장지역팩스번호		*/
+                --, UBP_FRNT_FXNUM	=		/*	통합사업장앞자리팩스번호		*/
+                --, UBP_SUFX_FXNUM	=		/*	통합사업장뒷자리팩스번호		*/
+                --, KWS_MNG_BRFFC_CD	=		/*	근복단관리지사코드		*/
+                --, KWS_PROCESS_BRFFC_CD	=		/*	근복단처리지사코드		*/
+                --, UBP_TOT_ORDTM_NMPR_CO	=		/*	통합사업장총상시인원수		*/
+                --, UBP_FRST_FORMATN_DY	=		/*	통합사업장최초성립일자		*/
+                --, UBP_LAST_EXTSH_DY	=		/*	통합사업장최종소멸일자		*/
+                --, UBP_EXTSH_SE_CD	=		/*	통합사업장소멸구분코드		*/
+                --, UBP_AREA_SE_CD	=		/*	통합사업장지역구분코드		*/
+                --, UBP_RDNMADR_CD	=		/*	통합사업장도로명주소코드		*/
+                --, UBP_SANCTN_DY	=		/*	통합사업장결재일자		*/
+                --, CPR_REGIST_NO	=		/*	법인등록번호		*/
+                --, CPR_SE_CD	=		/*	법인구분코드		*/
+                --, CPR_CL_SE_CD	=		/*	법인분류구분코드		*/
+                --, CPR_KND_SE_CD	=		/*	법인종류구분코드		*/
+                --, BSNS_KND_SE_CD	=		/*	사업종류구분코드		*/
+                --, MNPRT_NM	=		/*	주생산품명		*/
+                --, BPLC_EMAIL	=		/*	사업장이메일		*/
+                --, BPLC_URL	=		/*	사업장URL		*/
+                --, KWS_TOT_BPLC_CO	=		/*	근복단총사업장수		*/
+                --, SPCL_STLE_LABRR_SE_CD	=		/*	특수형태근로자구분코드		*/
+                --, NATION_SE_CD	=		/*	국가구분코드		*/
+                --, TOT_CNTRWK_AMOUNT	=		/*	총공사금액		*/
+                --, CNTRWK_SE_CD	=		/*	공사구분코드		*/
+                --, YEAR_NMPR_CO	=		/*	연인원수		*/
+                --, ORDER_OFFIC_MNG_NO	=		/*	발주처관리번호		*/
+                --, ORDER_NM	=		/*	발주처명		*/
+                --, CTNU_TMLMT_BSNS_SE_CD	=		/*	계속기한사업구분코드		*/
+                --, INSRNC_SE_CD	=		/*	보험구분코드		*/
+                --, BNDE_CNVRS_YN	=		/*	일괄전환여부		*/
+                --, LGGNG_ENRL_QY	=		/*	벌목재적량		*/
+                --, ORDER_TOT_CNTRWK_AMOUNT	=		/*	발주총공사금액		*/
+                --, CNTRCT_AMOUNT	=		/*	계약금액		*/
+                --, MATRL_CNVRSN_AMOUNT	=		/*	재료환산금액		*/
+                --, CNTRCT_DY	=		/*	계약일자		*/
+                --, CTRTC_STRWRK_DY	=		/*	계약서착공일자		*/
+                --, SIL_STRWRK_DY	=		/*	실착공일자		*/
+                --, COMPET_PREARNGE_DY	=		/*	준공예정일자		*/
+                --, PRMISN_DY	=		/*	허가일자		*/
+                --, PRMISN_NO	=		/*	허가번호		*/
+                --, PRMISN_INSTT_NM	=		/*	허가기관명		*/
+                --, INDUSAC_BSNS_SE_CD	=		/*	산재사업구분코드		*/
+                --, INDUSAC_BPLC_ST_SE_CD	=		/*	산재사업장상태구분코드		*/
+                --, INDUSAC_FORMATN_DY	=		/*	산재성립일자		*/
+                --, INDUSAC_EXTSH_DY	=		/*	산재소멸일자		*/
+                --, INDUSAC_ORDTM_NMPR_CO	=		/*	산재상시인원수		*/
+                --, INDUSAC_SRT_ST_SE_CD	=		/*	산재개시상태구분코드		*/
+                --, INDUSAC_BNDE_CNVRS_YN	=		/*	산재일괄전환여부		*/
+                --, INDUSAC_RCEPT_NO	=		/*	산재접수번호		*/
+                --, INDUSAC_RCEPT_DY	=		/*	산재접수일자		*/
+                --, INDUSAC_SANCTN_DY	=		/*	산재결재일자		*/
+                --, INDUSAC_CONFM_DY	=		/*	산재승인일자		*/
+                --, BFCHG_EMPLYM_INDUTY_CD	=		/*	변경전고용업종코드		*/
+                --, EMPLYM_BSNS_SE_CD	=		/*	고용사업구분코드		*/
+                --, EMPLYM_BPLC_ST_SE_CD	=		/*	고용사업장상태구분코드		*/
+                --, EMPLYM_FORMATN_DY	=		/*	고용성립일자		*/
+                --, EMPLYM_EXTSH_DY	=		/*	고용소멸일자		*/
+                --, EMPLYM_ORDTM_NMPR_CO	=		/*	고용상시인원수		*/
+                --, MALE_LABRR_CO	=		/*	남자근로자수		*/
+                --, FEMALE_LABRR_CO	=		/*	여성근로자수		*/
+                --, OP_LABRR_CO	=		/*	장년근로자수		*/
+                --, FRGNR_LABRR_CO	=		/*	외국인근로자수		*/
+                --, DSPSN_LABRR_CO	=		/*	장애인근로자수		*/
+                --, EMPLYM_SRT_ST_SE_CD	=		/*	고용개시상태구분코드		*/
+                --, EMPLYM_BNDE_CNVRS_YN	=		/*	고용일괄전환여부		*/
+                --, EMPLYM_RCEPT_NO	=		/*	고용접수번호		*/
+                --, EMPLYM_RCEPT_DY	=		/*	고용접수일자		*/
+                --, EMPLYM_SANCTN_DY	=		/*	고용결재일자		*/
+                --, EMPLYM_BNDE_CNVRS_SE_CD	=		/*	고용일괄전환구분코드		*/
+                --, EMPLYM_MNG_NO	=		/*	고용관리번호		*/
+                --, JOB_SE_CD	=		/*	업무구분코드		*/
+                --, FRST_INPUSR_ID	=		/*	최초입력자아이디		*/
+                --, FRST_INPUT_DEPT_CD	=		/*	최초입력부서코드		*/
+                --, FRST_INPUT_BRFFC_CD	=		/*	최초입력지사코드		*/
+                --, FRST_INPUT_DT	=		/*	최초입력일시		*/
+                --, LAST_UPDUSR_ID	=		/*	최종수정자아이디		*/
+                --, LAST_UPDT_DEPT_CD	=		/*	최종수정부서코드		*/
+                --, LAST_UPDT_BRFFC_CD	=		/*	최종수정지사코드		*/
+                , LAST_UPDT_DT	= T_END_DT 		/*	최종수정일시		*/
+		    WHERE UBP_BRL_KMAP_MNG_NO =(SELECT A.UBP_BRL_KMAP_MNG_NO
+                                                                  			 FROM A_CM_A00101 A
+                                                                   			           ,A_CM_A00100 B
+                                                                                       ,A_CM_B00101 C	/*UDSRLH_MRG_MNG_NO   이해관계인병합관리번호 =    A_CM_B00100 (UDSRLH_MNG_NO)  이해관계인관리번호 */
+            															  WHERE 1=1
+                                                                                AND A.UBP_MRG_MNG_NO = B.UBP_MNG_NO
+                                                                                AND C.UDSRLH_KMAP_MNG_NO = B.UDSRLH_KMAP_MNG_NO
+                                                                                AND A.BPLC_MNG_NO =  AA1.SAEOP_NO)
+		    AND HIST_END_DT = '99991231235959';
+			-- A_CM_A00101_HIS -- 끝
+			-- A_CM_B00100 -- 시작
+            UPDATE USR_UBP.A_CM_B00100
+              SET UDSRLH_NM	= AA1.SAEOPJU_NM	/*	이해관계인명		*/
+                --, UDSRLH_MNG_NO	=		/*	이해관계인관리번호		*/
+                --, UDSRLH_SEXDSTN_SE_CD	=		/*	이해관계인성별구분코드		*/
+                --, UDSRLH_NTFRR_SE_CD	=		/*	이해관계인내외국인구분코드		*/
+                --, UDSRLH_NRMLT_TMPR_YN	=		/*	이해관계인정상임시여부		*/
+                --, UDSRLH_BRTHDY	=		/*	이해관계인생년월일		*/
+                --, UDSRLH_IHIDNUM	=		/*	이해관계인주민등록번호		*/
+                --, UDSRLH_PSPRNBR	=		/*	이해관계인여권번호		*/
+                --, UDSRLH_FGNRNO	=		/*	이해관계인외국인등록번호		*/
+                --, UDSRLH_ZIP	=		/*	이해관계인우편번호		*/
+                --, UDSRLH_BASS_ADRES	=		/*	이해관계인기본주소		*/
+                --, UDSRLH_DETAIL_ADRES	=		/*	이해관계인상세주소		*/
+                --, UDSRLH_PRL_DETAIL_ADRES	=		/*	이해관계인병행상세주소		*/
+                --, UDSRLH_CBLE_TELNO	=		/*	이해관계인유선전화번호		*/
+                --, UDSRLH_WRLESS_TELNO	=		/*	이해관계인무선전화번호		*/
+                --, NATION_SE_CD	=		/*	국가구분코드		*/
+	 		WHERE UDSRLH_MNG_NO = (SELECT A.UBP_BRL_KMAP_MNG_NO
+                                                                  FROM A_CM_A00101 A
+                                                                   			,A_CM_A00100 B
+                                                                            ,A_CM_B00101 C	/*UDSRLH_MRG_MNG_NO   이해관계인병합관리번호 =    A_CM_B00100 (UDSRLH_MNG_NO)  이해관계인관리번호 */
+                                                              WHERE 1=1
+                                                              AND A.UBP_MRG_MNG_NO = B.UBP_MNG_NO
+                                                              AND C.UDSRLH_KMAP_MNG_NO = B.UDSRLH_KMAP_MNG_NO
+                                                              AND A.BPLC_MNG_NO =  AA1.SAEOP_NO);
+
+
+
+			-- A_CM_B00100 -- 끝
+
+			-- A_CM_B00101 -- 시작
+            UPDATE USR_UBP.A_CM_B00101
+                SET	LAST_UPDT_DT	=	T_END_DT
+                --,	UDSRLH_KMAP_MNG_NO	=		/*	이해관계인키맵관리번호		*/
+                --,	UDSRLH_MRG_SE_CD	=		/*	이해관계인병합구분코드		*/
+                --,	UDSRLH_MRG_MNG_NO	=		/*	이해관계인병합관리번호		*/
+                --,	UDSRLH_MRG_ODR	=		/*	이해관계인병합차수		*/
+                --,	UDSRLH_MRG_BEGIN_DT	=		/*	이해관계인병합시작일시		*/
+                --,	UDSRLH_MRG_END_DT	=		/*	이해관계인병합종료일시		*/
+                --,	FRST_INPUSR_ID	=		/*	최초입력자아이디		*/
+                --,	FRST_INPUT_DEPT_CD	=		/*	최초입력부서코드		*/
+                --,	FRST_INPUT_BRFFC_CD	=		/*	최초입력지사코드		*/
+                --,	FRST_INPUT_DT	=		/*	최초입력일시		*/
+                --,	LAST_UPDUSR_ID	=		/*	최종수정자아이디		*/
+                --,	LAST_UPDT_DEPT_CD	=		/*	최종수정부서코드		*/
+                --,	LAST_UPDT_BRFFC_CD	=		/*	최종수정지사코드		*/
+			 WHERE UDSRLH_KMAP_MNG_NO = (SELECT  B.UDSRLH_KMAP_MNG_NO
+                                                                             FROM A_CM_A00101 A
+                                                                             			,A_CM_A00100 B
+                                                                                        ,A_CM_B00101 C	/*UDSRLH_MRG_MNG_NO   이해관계인병합관리번호 =    A_CM_B00100 (UDSRLH_MNG_NO)  이해관계인관리번호 */
+                                                                           WHERE 1=1
+                                                               		            AND A.UBP_MRG_MNG_NO = B.UBP_MNG_NO
+                                                                                AND C.UDSRLH_KMAP_MNG_NO = B.UDSRLH_KMAP_MNG_NO
+                                                                                AND A.BPLC_MNG_NO =  AA1.SAEOP_NO);
+
+			-- A_CM_B00101 -- 끝
+
+			-- A_CM_B00100_HIS -- 시작
+            UPDATE USR_UBP.A_CM_B00101_HIS
+              SET HIST_BEGIN_DT	= T_BEGIN_DT		/*	이력시작일시		*/
+             -- ,	UDSRLH_KMAP_MNG_NO	=		/*	이해관계인키맵관리번호		*/
+              ,	HIST_END_DT	=	T_END_DT	/*	이력종료일시		*/
+             -- ,	UDSRLH_MRG_SE_CD	=		/*	이해관계인병합구분코드		*/
+             -- ,	UDSRLH_MRG_MNG_NO	=		/*	이해관계인병합관리번호		*/
+             -- ,	UDSRLH_MNG_NO	=		/*	이해관계인관리번호		*/
+             -- ,	UDSRLH_NM	=		/*	이해관계인명		*/
+             -- ,	UDSRLH_NTFRR_SE_CD	=		/*	이해관계인내외국인구분코드		*/
+             -- ,	UDSRLH_NRMLT_TMPR_YN	=		/*	이해관계인정상임시여부		*/
+             -- ,	UDSRLH_MRG_BEGIN_DT	=		/*	이해관계인병합시작일시		*/
+             -- ,	UDSRLH_MRG_ODR	=		/*	이해관계인병합차수		*/
+             -- ,	UDSRLH_MRG_END_DT	=		/*	이해관계인병합종료일시		*/
+             -- ,	UDSRLH_PSPRNBR	=		/*	이해관계인여권번호		*/
+             -- ,	UDSRLH_FGNRNO	=		/*	이해관계인외국인등록번호		*/
+             -- ,	UDSRLH_IHIDNUM	=		/*	이해관계인주민등록번호		*/
+             -- ,	UDSRLH_SEXDSTN_SE_CD	=		/*	이해관계인성별구분코드		*/
+             -- ,	UDSRLH_BRTHDY	=		/*	이해관계인생년월일		*/
+             -- ,	UDSRLH_ZIP	=		/*	이해관계인우편번호		*/
+             -- ,	UDSRLH_BASS_ADRES	=		/*	이해관계인기본주소		*/
+             -- ,	UDSRLH_DETAIL_ADRES	=		/*	이해관계인상세주소		*/
+             -- ,	UDSRLH_PRL_DETAIL_ADRES	=		/*	이해관계인병행상세주소		*/
+             -- ,	UDSRLH_CBLE_TELNO	=		/*	이해관계인유선전화번호		*/
+             -- ,	UDSRLH_WRLESS_TELNO	=		/*	이해관계인무선전화번호		*/
+             -- ,	NATION_SE_CD	=		/*	국가구분코드		*/
+             -- ,	FRST_INPUSR_ID	=		/*	AA		*/
+             -- ,	FRST_INPUT_DEPT_CD	=		/*	최초입력부서코드		*/
+             -- ,	FRST_INPUT_BRFFC_CD	=		/*	최초입력지사코드		*/
+             -- ,	FRST_INPUT_DT	=		/*	최초입력일시		*/
+             -- ,	LAST_UPDUSR_ID	=		/*	최종수정자아이디		*/
+             -- ,	LAST_UPDT_DEPT_CD	=		/*	최종수정부서코드		*/
+             -- ,	LAST_UPDT_BRFFC_CD	=		/*	최종수정지사코드		*/
+              ,	LAST_UPDT_DT	=  T_END_DT
+			WHERE HIST_END_DT = '99991231235959'
+	 		  AND UDSRLH_KMAP_MNG_NO = (SELECT  B.UDSRLH_KMAP_MNG_NO
+                                                                         FROM A_CM_A00101 A
+                                                                           			,A_CM_A00100 B
+                                                                                    ,A_CM_B00101 C	/*UDSRLH_MRG_MNG_NO   이해관계인병합관리번호 =    A_CM_B00100 (UDSRLH_MNG_NO)  이해관계인관리번호 */
+                                                                       WHERE 1=1
+                                                            		   AND A.UBP_MRG_MNG_NO = B.UBP_MNG_NO
+                                                                       AND C.UDSRLH_KMAP_MNG_NO = B.UDSRLH_KMAP_MNG_NO
+                                                                       AND A.BPLC_MNG_NO =  AA1.SAEOP_NO);
+			-- A_CM_B00100_HIS -- 끝
+
+            -- UPDATE 테이블 입력 끝
+
+
+            END IF;
+
+
+   		END IF ;
+  END LOOP;
+
+  T_MSG := '---END---';
+  IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+
+  T_BATCH_TRGET_TOT_CNT := T_ROWCNT ;
+  T_EDATE := SYSDATE ;
+
+  USR_UBP.PC_A_CM_00998(T_PROC_ID,T_SDATE ,T_EDATE ,T_BATCH_TRGET_TOT_CNT
+    						,T_NRMLT_PRSS_CO,T_EXCP_PRSS_CO,T_ERROR_PRSS_CO, '비고',NULL,NULL,NULL,SYSDATE,O_ERR,O_ERRMSG) ;
+
+  COMMIT;
+
+  EXCEPTION WHEN OTHERS THEN ROLLBACK ;
+  RETURN ;
+END;
+/

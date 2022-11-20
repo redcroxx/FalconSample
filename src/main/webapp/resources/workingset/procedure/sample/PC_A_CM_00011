@@ -1,0 +1,240 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00011
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ( I_DEBUG IN VARCHAR2  )
+/*******************************************************************************
+    프로그램 ID  : PC_A_CM_00011
+    프로그램 명  : 공동 대표 배치
+
+    파 라 미 터  :
+    프로그램설명 : 1) 근복단 공동대표정보 수신후 배치 처리
+
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-09-20   정해원     1. 최초작성
+ ****************************************************************************** */
+IS
+-- 0.선언
+	T_NO		NUMBER		 	:= 0 ;
+	T_ROWCNT	NUMBER		 	:= 0 ;
+	T_BATCH_TRGET_TOT_CNT	NUMBER		 	:= 0 ;
+	T_NRMLT_PRSS_CO			NUMBER		 	:= 0 ;
+	T_EXCP_PRSS_CO			NUMBER		 	:= 0 ;
+	T_ERROR_PRSS_CO			NUMBER		 	:= 0 ;
+	T_DATE 		DATE		:= SYSDATE ;
+	T_SDATE 	DATE		:= SYSDATE ;
+	T_EDATE 	DATE		:= SYSDATE ;
+	T_MSG 		VARCHAR2(2000) := '';
+	T_ERR_FLAG   CHAR(1) := '0';
+	T_ERR_KEY1   VARCHAR2(50) := ' ';
+	T_ERR_KEY2   VARCHAR2(50) := ' ';
+	T_ERR_KEY3   VARCHAR2(50) := ' ';
+	T_ERR_KEY4   VARCHAR2(50) := ' ';
+	T_ERR_KEY5   VARCHAR2(50) := ' ';
+	O_ERR				NUMBER		 	:= 0 ;
+	O_ERRMSG    	VARCHAR2(1000) := ' ';
+	T_CRUD_GU   CHAR(1) := 'C';
+	T_PROC_ID   VARCHAR2(10) := '11';
+	T_PROC_NM   VARCHAR2(50) := 'PC_A_CM_00011';
+	T_TABLE_NM   VARCHAR2(50) := 'Q_AA_R_JBZ041DT_IFR_DAY';
+
+	T_BATCH_PRSS_MNG_NO VARCHAR2(14) := '';
+	T_TMP_CNT		NUMBER		 	:= 0 ;
+	T_TMP_BRL_KMAP 		VARCHAR2(30) := NULL; --사업장키맵  
+	T_TMP_UDSRLH_KMAP 	VARCHAR2(30) := NULL; --이해관계인키맵
+	
+
+ CURSOR C1 IS
+-- 공동대표 쿼리
+SELECT
+	EAI_JEONSONG_SER			--	전송 순번
+	,GWANRI_NO				--	관리번호
+	,SAEOPJU_SEQ				--	사업주순번
+	,SAEOPJU_RGNO				--	대표자주민등록번호
+	,SAEOPJU_NM				--	대표자명
+	,SAEOPJU_POST				--	대표자우편번호
+	,SAEOPJU_ADDR1				--	대표자주소1
+	,SAEOPJU_ADDR2				--	대표자주소2
+	,BYEONGHAENG_SANGSE_ADDR		--	병행상세주소
+	,SAEOPJU_DDD				--	사업주1전화DDD
+	,SAEOPJU_TEL1				--	사업주1전화번호1
+	,SAEOPJU_TEL2				--	사업주1전화번호2
+	,SAEOPJU_EMAIL				--	대표자이메일
+	,CHEWIM_DT				--	취임일자
+	,HAEIM_DT				--	해임일자
+	,SAEOPJU_STATUS				--	사업주상태
+	,FIRST_DT				--	최초입력일
+	,LAST_DT				--	최종입력일
+	,EAI_DML_YUHYEONG			--	입력수정삭제구분자
+	,EAI_SAENGSEONG_ILSI			--	전송의뢰일시(근로복지공단 -> 노동부중계테이블)
+	,EAI_JEONSONG_ILSI			--	기관별 전송일시
+	,EAI_JEONSONG_YN			--	기관별 전송여부
+	,STATUS					--	고용노동부 배치프로그램 사용컬럼
+	,ERROR_SAYU				--	고용노동부 배치프로그램 사용컬럼
+	,GU_GWANRI_NO				--	구사업장관리번호
+	,CHERI_DT				--	고용노동부 배치프로그램 사용컬럼
+	,ESBIF_TK				--	연계 키
+	,ESBIF_IFFLAG				--	상태( INI 전송 대기, FIN : 완료, ERR : 에러., PROCESSING : 진행중)
+	,ESBIF_IFDATE				--	전송 시작
+	,ESBIF_FINDATE				--	전송 완료
+	,ESBIF_NOTE				--	처리 결과(정상 1,2,-2, | 오류내용)
+	,ESBIF_ACTION				--	I  : Insert, U : Update, D : Delete
+
+FROM USR_ESB.Q_AA_R_JBZ041DT_IFR_DAY
+WHERE ROWNUM < 30 ;
+--AND STATUS = 'N';
+
+
+
+
+
+BEGIN
+	T_MSG := T_PROC_NM ||' START! ';
+	IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+		/* 배치처리관리번호 채번 */
+		SELECT /*+ INDEX_DESC(A A_CM_M00101_PK) */
+   		     	LPAD(TO_NUMBER(MAX(BATCH_PRSS_MNG_NO)) +1 ,11,'0')  INTO 	T_BATCH_PRSS_MNG_NO
+			FROM USR_UBP.A_CM_M00101 A
+		WHERE A.BATCH_PRSS_MNG_NO <= '99999999999'
+		AND ROWNUM = 1 ;
+
+
+    FOR AA1 IN  C1 LOOP
+		T_MSG := '';
+		T_ROWCNT  := T_ROWCNT + 1;
+		T_ERR_FLAG := '0';
+    	T_TMP_BRL_KMAP := '';
+        T_TMP_UDSRLH_KMAP := '';
+
+
+        IF MOD(T_ROWCNT,10) = 0  THEN
+              T_MSG := T_PROC_NM ||' ROWCOUNT = '||  TO_CHAR(T_ROWCNT) ;
+              IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+        END IF ;
+ 
+		SELECT 	D.UBP_BRL_KMAP_MNG_NO
+   				,B.UDSRLH_KMAP_MNG_NO
+    		INTO
+    			T_TMP_BRL_KMAP
+                ,T_TMP_UDSRLH_KMAP
+  		FROM USR_UBP.A_CM_B00101 B ,USR_UBP.A_CM_A00100 C ,USR_UBP.A_CM_A00101 D
+  		WHERE  B.UDSRLH_KMAP_MNG_NO = C.UDSRLH_KMAP_MNG_NO
+  		AND C.UBP_MNG_NO  = D.UBP_MRG_MNG_NO
+  		AND D.BPLC_MNG_NO = TRIM(AA1.GWANRI_NO) 	;
+
+
+		IF T_TMP_BRL_KMAP IS NULL THEN
+		 	-- 사업장 및 이해관계인 미존재 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  AA1.GWANRI_NO || '   사업장및 이해관계인 키맵 미존재 오류 '  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+        ELSE
+
+
+
+   			SELECT COUNT(*)	 INTO T_TMP_CNT FROM  USR_UBP.X_A_CM_B00102 A
+   			WHERE 	A.UBP_BRL_KMAP_MNG_NO = T_TMP_BRL_KMAP 
+			AND		A.UDSRLH_KMAP_MNG_NO = T_TMP_UDSRLH_KMAP
+			AND 	TO_NUMBER(A.RPR_ORDR_NO) = AA1.SAEOPJU_SEQ ;
+		--	AND 	A.RPR_NM = TRIM(AA1.SAEOPJU_NM) ;
+
+
+
+            IF T_TMP_CNT > 0 THEN -- 중복에러
+			 	-- 중복 오류
+				T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  AA1.GWANRI_NO || '   중복오류 '  ;
+				IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+				T_ERR_FLAG := '1';
+	        ELSE
+  				T_ERR_FLAG := '0';
+            END IF;
+        END IF;
+
+
+		IF T_ERR_FLAG = '1' THEN			--오류 발생시 처리
+        	T_ERR_KEY1 := 'GWANRI_NO'  ;
+        	T_ERR_KEY2 := 'SAEOPJU_SEQ'  ;
+        	T_ERR_KEY3 := ''  ;
+        	T_ERR_KEY4 := ''  ;
+        	T_ERR_KEY5 := ''  ;
+
+	        USR_UBP.PC_A_CM_00999(T_BATCH_PRSS_MNG_NO,TO_CHAR(SYSDATE,'RRRRMMDDHHMMSS') ,  T_TABLE_NM
+            						,T_ERR_KEY1,T_ERR_KEY2,T_ERR_KEY3		,T_ERR_KEY4,T_ERR_KEY5,T_MSG
+                                    ,NULL,NULL,NULL,SYSDATE
+                                    ,NULL,NULL,NULL,SYSDATE
+                                        ,O_ERR,O_ERRMSG) ;
+
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERROR_PRSS_CO	:= T_ERROR_PRSS_CO	 + 1;
+		ELSE    --정상일 경우
+
+
+  T_MSG := '@ ' ||  T_TMP_BRL_KMAP  ||	'@ ' ||  T_TMP_UDSRLH_KMAP ||	'@ ' ||  TO_CHAR(AA1.SAEOPJU_SEQ) ||	'@ ' || TRIM(AA1.SAEOPJU_NM)	
+  					||	'@ ' ||  AA1.SAEOPJU_STATUS	||	'@ ' || TO_CHAR(AA1.CHEWIM_DT,'RRRRMMDD')	||	'@ ' || TO_CHAR(AA1.HAEIM_DT,'RRRRMMDD') ; 
+IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+
+			T_NRMLT_PRSS_CO := 	T_NRMLT_PRSS_CO + 1 ;
+			INSERT INTO X_A_CM_B00102
+            						( UBP_BRL_KMAP_MNG_NO,UDSRLH_KMAP_MNG_NO,RPR_ORDR_NO
+                                    ,RPR_NM,RPR_ST_SE_CD,INGR_DY,RLSOFC_DY
+                                    ,FRST_INPUSR_ID,FRST_INPUT_DEPT_CD,FRST_INPUT_BRFFC_CD,FRST_INPUT_DT
+                                    ,LAST_UPDUSR_ID,LAST_UPDT_DEPT_CD,LAST_UPDT_BRFFC_CD,LAST_UPDT_DT )
+                                    VALUES
+                                    ( T_TMP_BRL_KMAP	,T_TMP_UDSRLH_KMAP	,TO_CHAR(AA1.SAEOPJU_SEQ)
+					            	,TRIM(AA1.SAEOPJU_NM)	,AA1.SAEOPJU_STATUS	,TO_CHAR(AA1.CHEWIM_DT,'RRRRMMDD')	,TO_CHAR(AA1.HAEIM_DT,'RRRRMMDD')
+            						,NULL,NULL,NULL,SYSDATE
+            						,NULL,NULL,NULL,SYSDATE) ;
+
+T_MSG := T_PROC_NM ||' KK --' || TO_CHAR(T_ROWCNT) || 'ERRFLG=' || T_ERR_FLAG || SQLERRM ;
+IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+
+--			UPDATE USR_ESB.Q_AA_R_JBZ041DT_IFR_DAY SET STATUS = 'Y'
+--            WHERE EAI_JEONSONG_SER = AA1.EAI_JEONSONG_SER ;
+
+			T_MSG := T_PROC_NM ||' INSERT 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+   		END IF ;
+  END LOOP;
+
+	T_MSG := '---END---';
+	IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+
+	T_BATCH_TRGET_TOT_CNT := T_ROWCNT ;
+	T_EDATE := SYSDATE ;
+
+    USR_UBP.PC_A_CM_00998(T_PROC_ID,T_SDATE ,T_EDATE ,T_BATCH_TRGET_TOT_CNT
+    						,T_NRMLT_PRSS_CO,T_EXCP_PRSS_CO,T_ERROR_PRSS_CO, '비고',NULL,NULL,NULL,SYSDATE,O_ERR,O_ERRMSG) ;
+
+   COMMIT;
+
+	EXCEPTION WHEN OTHERS THEN
+			ROLLBACK ;
+			RETURN ;
+
+END;
+/

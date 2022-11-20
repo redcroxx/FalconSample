@@ -1,0 +1,511 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00041
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ( I_DEBUG IN VARCHAR2  )
+IS
+/*******************************************************************************
+    프로그램 ID  : PC_A_CM_00041
+    프로그램 명  : 우편번호매핑 배치처리
+ 사업장 배치
+
+    파 라 미 터  : 1 )
+    프로그램설명 : 1) 우편번호 마스터와 구우편번호 마스터 및 사업장 마스터
+           주소 정보를 이용하여 지사 매핑하여 수정 추가 처리하는 배치
+
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-09-10   정해원     1. 최초작성
+ ****************************************************************************** */
+-- 0.선언
+	T_NO		NUMBER		 	:= 0 ;
+	T_ROWCNT	NUMBER		 	:= 0 ;
+	T_BATCH_TRGET_TOT_CNT	NUMBER		 	:= 0 ;
+	T_NRMLT_PRSS_CO			NUMBER		 	:= 0 ;
+	T_EXCP_PRSS_CO			NUMBER		 	:= 0 ;
+	T_ERROR_PRSS_CO			NUMBER		 	:= 0 ;
+	T_DATE 		DATE		:= SYSDATE ;
+	T_SDATE 	DATE		:= SYSDATE ;
+	T_EDATE 	DATE		:= SYSDATE ;
+	T_MSG 		VARCHAR2(2000) := '';
+	T_ERR_FLAG   CHAR(1) := '0';
+	T_ERR_KEY1   VARCHAR2(50) := ' ';
+	T_ERR_KEY2   VARCHAR2(50) := ' ';
+	T_ERR_KEY3   VARCHAR2(50) := ' ';
+	T_ERR_KEY4   VARCHAR2(50) := ' ';
+	T_ERR_KEY5   VARCHAR2(50) := ' ';
+	O_ERR				NUMBER		 	:= 0 ;
+	O_ERRMSG    	VARCHAR2(1000) := ' ';
+	T_CRUD_GU   CHAR(1) := 'C';
+	T_PROC_ID   VARCHAR2(10) := '41';
+	T_PROC_NM   VARCHAR2(50) := 'PC_A_CM_00041';
+	T_TABLE_NM   VARCHAR2(50) := 'A_CM_E00100_LOD';  --우편번호 매핑 테이블
+	T_TMP_CNT 	NUMBER		 	:= 0 ;
+	T_BATCH_PRSS_MNG_NO VARCHAR2(11) := '';
+
+	T_BRFFC_CD	VARCHAR2(8) 	:= '' ; -- 우편번호 함수 호출후 관리지사 받아오는 변수
+	T_RDNMADR_MNG_NO   VARCHAR2(11) := ''; --도로명주소 관리번호
+
+
+
+
+-- 커서 선언
+ CURSOR C1 IS
+	SELECT
+		TRIM(BSIS_ZONE_NO)		AS 	ZIP
+		,TRIM(CTPRVN_NM)		AS 	CTPRVN_NM
+		,SUBSTR(ROAD_NM_CD,1,5)		AS 	AREA_SE_CD
+		,TRIM(SIGNGU_NM)		AS	SIGNGU_NM
+		,TRIM(ROAD_NM_CD)		AS	ROAD_NM_CD
+		,TRIM(ROAD_NM)			AS	ROAD_NM
+		,TRIM(LEGALDONG_CD)		AS	LEGALDONG_CD
+		,TRIM(LEGAL_EMD_NM)		AS	LEGAL_EMD_NM
+		,TRIM(LEGALLI_NM)		AS	LEGALLI_NM
+		,TRIM(ADSTRD_CD)		AS	ADSTRD_CD
+		,TRIM(ADSTRD_NM)		AS	ADSTRD_NM
+	FROM USR_UBP.A_CM_E00100_LOD
+	GROUP BY
+		TRIM(BSIS_ZONE_NO)
+		,TRIM(CTPRVN_NM)
+		,SUBSTR(ROAD_NM_CD,1,5)
+		,TRIM(SIGNGU_NM)
+		,TRIM(ROAD_NM_CD)
+		,TRIM(ROAD_NM)
+		,TRIM(LEGALDONG_CD)
+		,TRIM(LEGAL_EMD_NM)
+		,TRIM(LEGALLI_NM)
+		,TRIM(ADSTRD_CD)
+		,TRIM(ADSTRD_NM)
+	MINUS
+	SELECT
+		TRIM(ZIP)			AS 	ZIP
+		,TRIM(CTPRVN_NM)		AS 	CTPRVN_NM
+		,TRIM(AREA_SE_CD)		AS 	AREA_SE_CD
+		,TRIM(SIGNGU_NM)		AS	SIGNGU_NM
+		,TRIM(ROAD_NM_CD)		AS	ROAD_NM_CD
+		,TRIM(ROAD_NM)			AS	ROAD_NM
+		,TRIM(LEGALDONG_CD)		AS	LEGALDONG_CD
+		,TRIM(LEGAL_EMD_NM)		AS	LEGAL_EMD_NM
+		,TRIM(LEGALLI_NM)		AS	LEGALLI_NM
+		,TRIM(ADSTRD_CD)		AS	ADSTRD_CD
+		,TRIM(ADSTRD_NM)		AS	ADSTRD_NM
+	FROM USR_UBP.A_CM_E00101
+	GROUP BY
+		TRIM(ZIP)
+		,TRIM(CTPRVN_NM)
+		,TRIM(AREA_SE_CD)
+		,TRIM(SIGNGU_NM)
+		,TRIM(ROAD_NM_CD)
+		,TRIM(ROAD_NM)
+		,TRIM(LEGALDONG_CD)
+		,TRIM(LEGAL_EMD_NM)
+		,TRIM(LEGALLI_NM)
+		,TRIM(ADSTRD_CD)
+		,TRIM(ADSTRD_NM)
+		;
+
+
+BEGIN
+--1.초기화
+	-- 매일 시작시 우편번호 관리지사 TRUNCATE 후 그룹핑  생성
+	--1.1 우편번호 관리지사 그룹핑 데이타 생성(일일)
+	BEGIN
+   		EXECUTE IMMEDIATE 'TRUNCATE TABLE  USR_UBP.A_CM_E00102' ;
+
+	INSERT INTO USR_UBP.A_CM_E00102(ZIP_SE_CD, ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD, ZIP_MNG_BRFFC_MAP_CO)
+ 		SELECT *
+   			FROM ( SELECT DISTINCT '1' AS ZIP_SE_CD , ZIP , KOSHA_MNG_BRFFC_CD , EMLBR_MNG_BRFFC_CD , 1 AS ZIP_MNG_BRFFC_MAP_CO
+    	       		FROM USR_UBP.A_CM_E00101
+    	      		WHERE ZIP IN ( SELECT ZIP
+    	                       		FROM (  SELECT ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+    	                               		FROM USR_UBP.A_CM_E00101
+    	                              		GROUP BY ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+    	                             		)
+    	                      		GROUP BY ZIP
+    	                     		HAVING COUNT(1) = 1
+    	                    	)
+    	      		UNION
+    	    		SELECT '1' AS ZIP_SE_CD  , ZIP  , KOSHA_MNG_BRFFC_CD , EMLBR_MNG_BRFFC_CD , COUNT(1) OVER (PARTITION BY ZIP ) AS IP_MNG_BRFFC_MAP_CO
+    	      		FROM ( SELECT DISTINCT ZIP , KOSHA_MNG_BRFFC_CD  , EMLBR_MNG_BRFFC_CD
+    	              		FROM USR_UBP.A_CM_E00101
+    	             		WHERE ZIP IN ( SELECT ZIP
+    	                    	            FROM ( SELECT ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+    	                                     		FROM USR_UBP.A_CM_E00101
+    	                                    		GROUP BY ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+    	                                   			)
+    	                            		GROUP BY ZIP
+    	                           			HAVING COUNT(1) > 1
+    	                            		)
+    	   					)
+    	    	)
+ 		UNION ALL
+ 		--구우편번호와 관리지사기 1:1 인 데이터 --33,981
+ 		SELECT *
+   		FROM (  SELECT DISTINCT '2' AS ZIP_SE_CD , OLD_ZIP , KOSHA_MNG_BRFFC_CD , EMLBR_MNG_BRFFC_CD   , 1 AS ZIP_MNG_BRFFC_MAP_CO
+           		FROM USR_UBP.A_CM_E00101
+          		WHERE OLD_ZIP IN (   SELECT OLD_ZIP
+                               		FROM ( SELECT OLD_ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+                                       		FROM USR_UBP.A_CM_E00101
+                                      		GROUP BY OLD_ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+                                     		)
+                              		GROUP BY OLD_ZIP
+                             		HAVING COUNT(1) = 1
+                           			)
+          		UNION
+        		SELECT '2' AS ZIP_SE_CD  , OLD_ZIP   , KOSHA_MNG_BRFFC_CD       , EMLBR_MNG_BRFFC_CD , COUNT(1) OVER (PARTITION BY OLD_ZIP ) AS IP_MNG_BRFFC_MAP_CO
+          		FROM (  SELECT DISTINCT  OLD_ZIP   , KOSHA_MNG_BRFFC_CD      , EMLBR_MNG_BRFFC_CD
+                  		FROM USR_UBP.A_CM_E00101
+                 		WHERE OLD_ZIP IN ( SELECT OLD_ZIP
+                                     		FROM (	SELECT OLD_ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+                                             		FROM USR_UBP.A_CM_E00101
+                                            		GROUP BY OLD_ZIP, KOSHA_MNG_BRFFC_CD, EMLBR_MNG_BRFFC_CD
+                                           			)
+                                    		GROUP BY OLD_ZIP
+                                   			HAVING COUNT(1) > 1
+                                   		)
+                 		)
+        		)
+
+		UNION
+        /* 김주영 과장 수동 매핑용 향후 제거 필요 */
+        SELECT
+		'1'
+		,ZIP
+		,KOSHA_MNG_BRFFC_CD
+		,EMLBR_MNG_BRFFC_CD
+		,COUNT(*)
+		FROM
+		A_CM_E00102_KIM
+		GROUP BY
+		ZIP
+		,KOSHA_MNG_BRFFC_CD
+		,EMLBR_MNG_BRFFC_CD
+
+		;
+		COMMIT;
+		-- 우편번호관리지사그룹이 2개이상 예외처리 INSERT
+
+--       INSERT INTO A_CM_E00101_LOG
+--				(EXCP_PRSS_MNG_NO
+-- 				,EXCP_PRSS_OCCRRNC_DY
+-- 				,UBP_ZIP
+-- 				,EMLBR_MNG_BRFFC_CD
+-- 				,KOSHA_MNG_BRFFC_CD
+--                ,RM_CN
+-- 				)
+-- 				SELECT
+--					LPAD((SELECT /*+ INDEX_DESC(A A_CM_E00101_LOG_PK) */
+--   		     			NVL( MAX(EXCP_PRSS_MNG_NO),0)  FROM USR_UBP.A_CM_E00101_LOG
+--					WHERE EXCP_PRSS_MNG_NO < '99999999999'
+--					) + ROWNUM,9,'0')   AS EXCP_PRSS_MNG_NO
+-- 					,TO_CHAR(SYSDATE,'RRRRMMDD')
+--    				,ZIP
+--    				,KOSHA_MNG_BRFFC_CD
+--    				,EMLBR_MNG_BRFFC_CD
+--                    ,'우편번호관리지사그룹이 2개이상'
+--				FROM USR_UBP.A_CM_E00102
+--				WHERE ZIP_MNG_BRFFC_MAP_CO > 1
+--                AND ZIP NOT IN
+--                (SELECT UBP_ZIP FROM A_CM_E00101_LOG)  	;
+--		COMMIT;
+
+	END ;
+
+	-- A_CM_E00100_LOD COUNT 체크 후 진행 여부 체크
+	SELECT COUNT(*) INTO T_TMP_CNT  FROM  USR_UBP.A_CM_E00100_LOD WHERE ROWNUM < 2 ;
+    --사용자가 우편번호를 SQLLORDER 로 임포트 안한경우 종료
+    IF NVL(T_TMP_CNT,0) < 1 THEN
+    	RETURN ;
+    END IF;
+
+
+	T_MSG := T_PROC_NM ||' START! ';
+
+		/* 배치처리관리번호 채번 */
+		SELECT /*+ INDEX_DESC(A A_CM_M00101_PK) */
+   		     	LPAD(TO_NUMBER(NVL(MAX(BATCH_PRSS_MNG_NO),0)) +1 ,11,'0')  INTO 	T_BATCH_PRSS_MNG_NO
+			FROM USR_UBP.A_CM_M00101 A
+		WHERE A.BATCH_PRSS_MNG_NO <= '99999999999'
+		AND ROWNUM = 1 ;
+
+	IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+    FOR AA1 IN  C1 LOOP
+		SELECT COUNT(*) INTO T_TMP_CNT FROM USR_UBP.A_CM_E00101 WHERE ZIP =  AA1.ZIP ;
+		IF T_TMP_CNT = 0 THEN
+        	T_CRUD_GU := 'C' ;
+			SELECT /*+ INDEX_DESC(A A_CM_E00101_PK) */
+	   		     	LPAD(TO_NUMBER(NVL(MAX(RDNMADR_MNG_NO),0)) +1 ,9,'0')	INTO T_RDNMADR_MNG_NO
+				FROM USR_UBP.A_CM_E00101 A
+			WHERE A.RDNMADR_MNG_NO <= '999999999'
+			AND ROWNUM < 3 ;
+
+
+			INSERT INTO USR_UBP.A_CM_E00101
+					(RDNMADR_MNG_NO
+                    ,ZIP
+				 	,CTPRVN_NM
+			 		,AREA_SE_CD
+					,SIGNGU_NM
+					,ROAD_NM_CD
+					,ROAD_NM
+					,LEGALDONG_CD
+					,LEGAL_EMD_NM
+					,LEGALLI_NM
+					,ADSTRD_CD
+					,ADSTRD_NM
+			 		,KOSHA_MNG_BRFFC_CD
+					,EMLBR_MNG_BRFFC_CD
+					) VALUES
+                    (T_RDNMADR_MNG_NO
+					,AA1.ZIP
+					,AA1.CTPRVN_NM
+					,AA1.AREA_SE_CD
+					,AA1.SIGNGU_NM
+					,AA1.ROAD_NM_CD
+			 		,AA1.ROAD_NM
+					,AA1.LEGALDONG_CD
+					,AA1.LEGAL_EMD_NM
+					,AA1.LEGALLI_NM
+					,AA1.ADSTRD_CD
+					,AA1.ADSTRD_NM
+					,'00'
+					,'0000'
+			 		) ;
+
+			INSERT INTO USR_UBP.A_CM_E00101_HIS
+					(RDNMADR_MNG_NO
+					,VALID_BEGIN_DY
+					,VALID_END_DY
+                    ,ZIP
+				 	,CTPRVN_NM
+			 		,AREA_SE_CD
+					,SIGNGU_NM
+					,ROAD_NM_CD
+					,ROAD_NM
+					,LEGALDONG_CD
+					,LEGAL_EMD_NM
+					,LEGALLI_NM
+					,ADSTRD_CD
+					,ADSTRD_NM
+			 		,KOSHA_MNG_BRFFC_CD
+					,EMLBR_MNG_BRFFC_CD
+					) VALUES
+                    (T_RDNMADR_MNG_NO
+					,TO_CHAR(SYSDATE,'RRRRMMDD')
+                    ,'99999999'
+					,AA1.ZIP
+					,AA1.CTPRVN_NM
+					,AA1.AREA_SE_CD
+					,AA1.SIGNGU_NM
+					,AA1.ROAD_NM_CD
+			 		,AA1.ROAD_NM
+					,AA1.LEGALDONG_CD
+					,AA1.LEGAL_EMD_NM
+					,AA1.LEGALLI_NM
+					,AA1.ADSTRD_CD
+					,AA1.ADSTRD_NM
+					,'00'
+					,'0000'
+			 		) ;
+
+			T_MSG := T_PROC_NM ||' INSERT 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			/* 예외처리 추가  */
+          --   SELECT COUNT(*)  INTO  T_TMP_CNT FROM A_CM_E00101_LOG
+          --	WHERE EXCP_PRSS_OCCRRNC_DY = TO_CHAR(SYSDATE,'RRRRMMDD')
+          --	AND UBP_ZIP = AA1.ZIP
+          --    AND EMLBR_MNG_BRFFC_CD = '00'
+          --    KOSHA_MNG_BRFFC_CD = '0000' ;
+           	IF T_TMP_CNT = 0  THEN
+
+	--       INSERT INTO A_CM_E00101_LOG
+--				(EXCP_PRSS_MNG_NO
+-- 				,EXCP_PRSS_OCCRRNC_DY
+-- 				,UBP_ZIP
+-- 				,EMLBR_MNG_BRFFC_CD
+-- 				,KOSHA_MNG_BRFFC_CD
+--                ,RM_CN
+-- 				) VALUES
+-- 				(SELECT
+--					LPAD((SELECT /*+ INDEX_DESC(A A_CM_E00101_LOG_PK) */
+--   		     			NVL( MAX(EXCP_PRSS_MNG_NO),0)  FROM USR_UBP.A_CM_E00101_LOG
+--					WHERE EXCP_PRSS_MNG_NO < '99999999999'
+--					) + 1,9,'0'))   AS EXCP_PRSS_MNG_NO
+-- 					,TO_CHAR(SYSDATE,'RRRRMMDD')
+--    				,AA1.ZIP
+--    				,'00'
+--    				,'0000'
+--                    ,'우편번호 신규 예외처리'
+--					)
+					T_MSG := T_PROC_NM ||' 예외 처리 INSERT 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+					IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+				END IF ;
+
+
+		ELSE
+        	T_CRUD_GU := 'U' ;
+
+        	UPDATE USR_UBP.A_CM_E00101 SET
+			 	AREA_SE_CD	=	AA1.AREA_SE_CD
+				,ROAD_NM_CD	=	AA1.ROAD_NM_CD
+				,LEGALDONG_CD	=	AA1.LEGALDONG_CD
+				,ADSTRD_CD	= 	AA1.ADSTRD_CD
+			WHERE	ZIP			=	AA1.ZIP
+			AND	TRIM(CTPRVN_NM)		=	TRIM(AA1.CTPRVN_NM)
+			AND	TRIM(SIGNGU_NM)		=	TRIM(AA1.SIGNGU_NM)
+			AND	TRIM(ROAD_NM)		=	TRIM(AA1.ROAD_NM)
+			AND	TRIM(LEGAL_EMD_NM)	=	TRIM(AA1.LEGAL_EMD_NM)
+			AND	TRIM(LEGALLI_NM)	=	TRIM(AA1.LEGALLI_NM)
+			AND	TRIM(ADSTRD_NM)		=	TRIM(AA1.ADSTRD_NM) ;
+
+    		UPDATE
+		       USR_UBP.A_CM_E00101_HIS 		       SET
+		       VALID_END_DY = TO_CHAR(SYSDATE -1 ,'RRRRMMDD')
+		       ,LAST_UPDT_DT = SYSDATE
+			WHERE	ZIP			=	AA1.ZIP
+			AND	TRIM(CTPRVN_NM)		=	TRIM(AA1.CTPRVN_NM)
+			AND	TRIM(SIGNGU_NM)		=	TRIM(AA1.SIGNGU_NM)
+			AND	TRIM(ROAD_NM)		=	TRIM(AA1.ROAD_NM)
+			AND	TRIM(LEGAL_EMD_NM)	=	TRIM(AA1.LEGAL_EMD_NM)
+			AND	TRIM(LEGALLI_NM)	=	TRIM(AA1.LEGALLI_NM)
+			AND	TRIM(ADSTRD_NM)		=	TRIM(AA1.ADSTRD_NM)
+			AND	VALID_END_DY = '99991231'  ;
+
+			INSERT INTO USR_UBP.A_CM_E00101_HIS
+		       (
+		           RDNMADR_MNG_NO,
+		           VALID_BEGIN_DY,
+		           VALID_END_DY,
+		           ZIP,
+		           CTPRVN_NM,
+		           AREA_SE_CD,
+		           SIGNGU_NM,
+		           ROAD_NM_CD,
+		           ROAD_NM,
+		           LEGALDONG_CD,
+		           LEGAL_EMD_NM,
+		           LEGALLI_NM,
+		           ADSTRD_CD,
+		           ADSTRD_NM,
+		           KOSHA_MNG_BRFFC_CD,
+		           EMLBR_MNG_BRFFC_CD,
+		           OLD_ZIP,
+		           FRST_INPUSR_ID,
+		           FRST_INPUT_DEPT_CD,
+		           FRST_INPUT_BRFFC_CD,
+		           FRST_INPUT_DT,
+		           LAST_UPDUSR_ID,
+		           LAST_UPDT_DEPT_CD,
+		           LAST_UPDT_BRFFC_CD,
+		           LAST_UPDT_DT
+		       )
+		       SELECT
+		           RDNMADR_MNG_NO,		/* 도로명주소관리번호 */
+		           TO_CHAR(SYSDATE,'RRRRMMDD'),  /* SYSDATE */
+		           '99991231',			/* 유효종료일자 */
+		           ZIP,				/* 우편번호 */
+		           CTPRVN_NM,			/* 시도명 */
+		           AREA_SE_CD,			/* 지역구분코드 */
+		           SIGNGU_NM,			/* 시군구명 */
+		           ROAD_NM_CD,			/* 도로명코드 */
+		           ROAD_NM,			/* 도로명 */
+		           LEGALDONG_CD,		/* 법정동코드 */
+		           LEGAL_EMD_NM,		/* 법정읍면동명 */
+		           LEGALLI_NM,			/* 법정리명 */
+		           ADSTRD_CD,			/* 행정동코드 */
+		           ADSTRD_NM,			/* 행정동명 */
+		           KOSHA_MNG_BRFFC_CD,		/* 안전보건공단관리지사코드 */
+		           EMLBR_MNG_BRFFC_CD,		/* 고용노동부관리지사코드 */
+		           OLD_ZIP,			/* 구우편번호 */
+		           FRST_INPUSR_ID,		/* 최초입력자아이디 */
+		           FRST_INPUT_DEPT_CD,		/* 최초입력부서코드 */
+		           FRST_INPUT_BRFFC_CD,		/* 최초입력지사코드 */
+		           FRST_INPUT_DT,		/* 최초입력일시 */
+		           LAST_UPDUSR_ID,		/* 최종수정자아이디 */
+		           LAST_UPDT_DEPT_CD,		/* 최종수정부서코드 */
+		           LAST_UPDT_BRFFC_CD,		/* 최종수정지사코드 */
+		           LAST_UPDT_DT			/* 최종수정일시 */
+		  	FROM USR_UBP.A_CM_E00101
+			WHERE	ZIP			=	AA1.ZIP
+				AND	TRIM(CTPRVN_NM)		=	TRIM(AA1.CTPRVN_NM)
+				AND	TRIM(SIGNGU_NM)		=	TRIM(AA1.SIGNGU_NM)
+				AND	TRIM(ROAD_NM)		=	TRIM(AA1.ROAD_NM)
+				AND	TRIM(LEGAL_EMD_NM)	=	TRIM(AA1.LEGAL_EMD_NM)
+				AND	TRIM(LEGALLI_NM)	=	TRIM(AA1.LEGALLI_NM)
+				AND	TRIM(ADSTRD_NM)		=	TRIM(AA1.ADSTRD_NM)
+			;
+
+			T_MSG := T_PROC_NM ||' UPDATE 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+
+
+
+		END IF ;
+
+		T_ROWCNT  := T_ROWCNT + 1;
+		T_ERR_FLAG := '0';
+		T_ROWCNT  := T_ROWCNT + 1;
+		T_ERR_FLAG := '0';
+
+		IF T_ERR_FLAG = '1' THEN			--오류 발생시 처리
+        	T_ERR_KEY1 := 'BSIS_ZONE_NO'  ;
+        	T_ERR_KEY2 := 'CTPRVN_NM'  ;
+        	T_ERR_KEY3 := 'SIGNGU_NM'  ;
+        	T_ERR_KEY4 := 'LEGAL_EMD_NM'  ;
+        	T_ERR_KEY5 := 'ADSTRD_NM'  ;
+
+	        USR_UBP.PC_A_CM_00999(T_BATCH_PRSS_MNG_NO,TO_CHAR(SYSDATE,'RRRRMMDDHHMMSS') ,  T_TABLE_NM
+            						,T_ERR_KEY1,T_ERR_KEY2,T_ERR_KEY3		,T_ERR_KEY4,T_ERR_KEY5,T_MSG
+                                    ,NULL,NULL,NULL,SYSDATE
+                                    ,NULL,NULL,NULL,SYSDATE
+                                        ,O_ERR,O_ERRMSG) ;
+
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERROR_PRSS_CO	:= T_ERROR_PRSS_CO	 + 1;
+		ELSE    --정상일 경우
+			T_NRMLT_PRSS_CO := 	T_NRMLT_PRSS_CO + 1 ;
+   		END IF ;
+  END LOOP;
+
+	T_MSG := '---END---';
+	IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+	T_BATCH_TRGET_TOT_CNT := T_ROWCNT ;
+	T_EDATE := SYSDATE ;
+
+    USR_UBP.PC_A_CM_00998(T_PROC_NM,T_SDATE ,T_EDATE ,T_BATCH_TRGET_TOT_CNT
+    						,T_NRMLT_PRSS_CO,T_EXCP_PRSS_CO,T_ERROR_PRSS_CO, '비고',NULL,NULL,NULL,SYSDATE,O_ERR,O_ERRMSG) ;
+
+   COMMIT;
+  --  EXECUTE IMMEDIATE 'TRUNCATE TABLE  A_CM_E00100_LOD' ;
+	EXCEPTION WHEN OTHERS THEN
+			ROLLBACK ;
+			RETURN ;
+END;
+/

@@ -1,0 +1,170 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_00031
+
+
+
+
+
+
+
+
+
+
+( I_DEBUG IN VARCHAR2  )
+IS
+/*******************************************************************************
+    프로그램 ID  : PC_A_CM_00031
+    프로그램 명  : 사업장 노동부 송신배치
+ 사업장 배치
+
+    파 라 미 터  : 1 )
+    프로그램설명 : 1) 임시,고유 사업장을 ESB에 송신하면 노동부로 송신
+
+
+ *******************************************************************************
+ REVISIONS
+ ------  ----------   ---------  -----------------------------------------------
+  버전    작업일자     작성자     Description
+ -----   ----------   ---------  -----------------------------------------------
+ 1.0.0   2016-09-20   정해원     1. 최초작성
+ ****************************************************************************** */
+-- 0.선언
+	T_NO		NUMBER		 	:= 0 ;
+	T_ROWCNT	NUMBER		 	:= 0 ;
+	T_BATCH_TRGET_TOT_CNT	NUMBER		 	:= 0 ;
+	T_NRMLT_PRSS_CO			NUMBER		 	:= 0 ;
+	T_EXCP_PRSS_CO			NUMBER		 	:= 0 ;
+	T_ERROR_PRSS_CO			NUMBER		 	:= 0 ;
+	T_DATE 		DATE		:= SYSDATE ;
+	T_SDATE 	DATE		:= SYSDATE ;
+	T_EDATE 	DATE		:= SYSDATE ;
+	T_MSG 		VARCHAR2(2000) := '';
+	T_ERR_FLAG   CHAR(1) := '0';
+	T_ERR_KEY1   VARCHAR2(50) := ' ';
+	T_ERR_KEY2   VARCHAR2(50) := ' ';
+	T_ERR_KEY3   VARCHAR2(50) := ' ';
+	T_ERR_KEY4   VARCHAR2(50) := ' ';
+	T_ERR_KEY5   VARCHAR2(50) := ' ';
+	O_ERR				NUMBER		 	:= 0 ;
+	O_ERRMSG    	VARCHAR2(1000) := ' ';
+	T_CRUD_GU   CHAR(1) := 'C';
+	T_PROC_ID   VARCHAR2(10) := '31';
+	T_PROC_NM   VARCHAR2(50) := 'PC_A_CM_00031';
+	T_TABLE_NM   VARCHAR2(50) := 'Q_AA_R_JBZ041DT_IFR_DAY';
+
+	T_BATCH_PRSS_MNG_NO VARCHAR2(11) := '';
+
+
+/*
+SELECT  *
+  FROM USR_UBP.A_CM_A00101 A , USR_UBP.A_CM_A00100 B
+		WHERE A.UBP_MRG_MNG_NO = B.UBP_MNG_NO
+  --      AND B.UBP_RNDM_SE_CD = '2'
+        AND  B.UBP_LAST_ST_SE_CD = '1'  --정상사업장 1  종료 2
+        AND TRNSMIS_TRGET_SE_CD = '2' --전송대상
+        AND TRNSMIS_COMPT_SE_CD = '0'  --미전송
+  		AND ROWNUM < 100 ;
+
+*/
+
+/* 테스트용 */
+ CURSOR C1 IS
+   SELECT *
+      		FROM USR_UBP.A_CM_E00101
+       WHERE CTPRVN_NM LIKE '서울특별시%'
+       AND ROWNUM < 100 ;
+
+
+
+
+BEGIN
+	T_MSG := T_PROC_NM ||' START! ';
+
+		/* 배치처리관리번호 채번 */
+		SELECT /*+ INDEX_DESC(A A_CM_M00101_PK) */
+   		     	LPAD(TO_NUMBER(MAX(BATCH_PRSS_MNG_NO)) +1 ,11,'0')  INTO 	T_BATCH_PRSS_MNG_NO
+			FROM USR_UBP.A_CM_M00101 A
+		WHERE A.BATCH_PRSS_MNG_NO <= '99999999999'
+		AND ROWNUM = 1 ;
+
+	IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+    FOR AA1 IN  C1 LOOP
+   		--T_CRUD_GU := AA1.ESBIF_ACTION ;   --CRUD 구분 코드
+		T_ROWCNT  := T_ROWCNT + 1;
+		T_ERR_FLAG := '0';
+		T_ROWCNT  := T_ROWCNT + 1;
+		T_ERR_FLAG := '0';
+		IF MOD(T_ROWCNT,10) = 0 THEN
+			T_MSG := T_PROC_NM ||' ROWCOUNT = '||  TO_CHAR(T_ROWCNT) || '      ' ||  TO_CHAR(AA1.ZIP) ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+		END IF ;
+
+        IF LENGTH(AA1.ZIP) < 5 THEN
+		 	-- 길이 오류
+			T_MSG := T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  TO_CHAR(AA1.ZIP) || '   길이오류 '  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+        IF LENGTH(AA1.ROAD_NM_CD) < 3 THEN
+		 	-- 길이 오류
+			T_MSG :=  T_MSG || T_PROC_NM ||' ERROR = '||  TO_CHAR(T_ROWCNT) || '      ' ||  TO_CHAR(AA1.ZIP) || '   길이오류 '  ;
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERR_FLAG := '1';
+		END IF;
+
+
+
+
+		IF T_ERR_FLAG = '1' THEN			--오류 발생시 처리
+        	T_ERR_KEY1 := 'GWANRI_NO'  ;
+        	T_ERR_KEY2 := 'SAEOPJU_SEQ'  ;
+        	T_ERR_KEY3 := ''  ;
+        	T_ERR_KEY4 := ''  ;
+        	T_ERR_KEY5 := ''  ;
+
+
+	        USR_UBP.PC_A_CM_00999(T_BATCH_PRSS_MNG_NO,TO_CHAR(SYSDATE,'RRRRMMDDHHMMSS') ,  T_TABLE_NM
+            						,T_ERR_KEY1,T_ERR_KEY2,T_ERR_KEY3		,T_ERR_KEY4,T_ERR_KEY5,T_MSG
+                                    ,'BATCH','','',SYSDATE
+                                    ,'BATCH','','',SYSDATE
+                                        ,O_ERR,O_ERRMSG) ;
+
+			IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+			T_ERROR_PRSS_CO	:= T_ERROR_PRSS_CO	 + 1;
+		ELSE    --정상일 경우
+			T_NRMLT_PRSS_CO := 	T_NRMLT_PRSS_CO + 1 ;
+			CASE T_CRUD_GU  --처리 구분
+ 				WHEN 'C'	THEN	-- 신규
+					T_MSG := T_PROC_NM ||' INSERT 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+					IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+ 				WHEN 'U'	THEN	-- 수정
+					T_MSG := T_PROC_NM ||' UPDATE 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+					IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+ 				WHEN 'D'	THEN	-- 삭제
+					T_NRMLT_PRSS_CO := 	T_NRMLT_PRSS_CO + 1 ;
+					T_MSG := T_PROC_NM ||' DELETE 처리 = '||  TO_CHAR(T_ROWCNT) || ' OK!' ;
+					IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+  			END CASE;
+
+   		END IF ;
+  END LOOP;
+
+	T_MSG := '---END---';
+	IF I_DEBUG = 'DEBUG' THEN DBMS_OUTPUT.Put_Line(T_MSG); END IF ;
+
+
+	T_BATCH_TRGET_TOT_CNT := T_ROWCNT ;
+	T_EDATE := SYSDATE ;
+
+    USR_UBP.PC_A_CM_00998(T_PROC_NM,T_SDATE ,T_EDATE ,T_BATCH_TRGET_TOT_CNT
+    						,T_NRMLT_PRSS_CO,T_EXCP_PRSS_CO,T_ERROR_PRSS_CO, '비고','BATCH','','',SYSDATE,O_ERR,O_ERRMSG) ;
+
+   COMMIT;
+
+	EXCEPTION WHEN OTHERS THEN
+			ROLLBACK ;
+			RETURN ;
+
+END;
+/

@@ -1,0 +1,26 @@
+CREATE OR REPLACE PROCEDURE USR_UBP.PC_A_CM_A00103 (IN_REG_NO IN VARCHAR2
+--                                                   ,V_RETURN                                             OUT VARCHAR2                                             -- 리턴 값분 ('01' : 성공 그 외 : 실패)
+--                                                   ,V_MSG                                                  OUT VARCHAR2                                             -- 리턴 메시지
+   ) IS
+--            CHK_NUM NUMBER(3) := 0;
+   BEGIN
+
+       BEGIN
+--            CHK_NUM := 1;
+            
+            INSERT INTO A_CM_A00103
+            (UBP_BRL_KMAP_MNG_NO, JOB_SE_CD, J1_MRGN_KEY_VAL_FIELD_NM) VALUES
+            (IN_REG_NO, 'ACM', 'ABC');
+ 
+       EXCEPTION
+--            WHEN  NO_DATA_FOUND then null;
+        WHEN OTHERS THEN
+            ROLLBACK;
+--            V_RETURN := '99';                                           -- 실패
+--            V_MSG := 'USR_UBP.PC_ACMA_00001 == ' || SQLERRM;
+--            RETURN;  
+       END;
+
+       COMMIT;
+   END PC_A_CM_A00103;
+/
